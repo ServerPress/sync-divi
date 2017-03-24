@@ -1,2 +1,2 @@
 # sync-divi
-sync for divi
+Repository for the WPSiteSync for Divi add-on
