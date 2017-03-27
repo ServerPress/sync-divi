@@ -1,0 +1,16 @@
+#sync-divi-ui {
+	border: 1px solid #4accf6;
+	background: #FFFFFF;
+	padding: 0.5em;
+	width: 25rem;
+	float: right;
+	margin-bottom: 1em;
+}
+
+#spectrom_sync.sync-divi-contents {
+	border: medium none;
+}
+
+#sync-divi-ui + .et_pb_roles_title, #main_options_form {
+	clear: both;
+}
