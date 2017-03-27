@@ -75,6 +75,11 @@ class SyncDiviAdmin
 							<p><em>WPSiteSync&#8482; for Divi</em> provides a convenient way to sync your
 								Divi Settings between two WordPress sites.</p>
 							<p>Target site: <b><?php echo esc_url(SyncOptions::get('target')); ?>:</b></p>
+							<div id="sync-message-container" style="display:none">
+								<span id="sync-content-anim" style="display:none"><img src="<?php echo esc_url(WPSiteSyncContent::get_asset('imgs/ajax-loader.gif')); ?>"/></span>
+								<span id="sync-message"></span>
+								<span id="sync-message-dismiss" style="display:none"><span class="dashicons dashicons-dismiss" onclick="wpsitesynccontent.clear_message(); return false"></span></span>
+							</div>
 							<button class="sync-divi-push button button-primary sync-button" type="button" onclick="wpsitesynccontent.divi.push_handler(); return false;"
 								title="<?php esc_html_e('Push Divi Settings to the Target site', 'wpsitesync-divi'); ?>">
 								<span class="sync-button-icon dashicons dashicons-migrate"></span>
@@ -92,22 +97,11 @@ class SyncDiviAdmin
 								<?php esc_html_e('Pull Settings from Target', 'wpsitesync-divi'); ?>
 							</button>
 
-							<div class="sync-divi-msgs" style="display:none">
-								<div class="sync-divi-loading-indicator">
-									<img src="<?php echo esc_url(WPSiteSyncContent::get_asset('imgs/ajax-loader.gif')); ?>"/>&nbsp;
-									<?php esc_html_e('Synchronizing Divi Settings...', 'wpsitesync-divi'); ?>
-								</div>
-								<div class="sync-divi-failure-msg">
-									<?php esc_html_e('Failed to Sync Divi Settings.', 'wpsitesync-divi'); ?>
-									<span class="sync-divi-failure-detail"></span>
-									<span class="sync-divi-failure-api"><?php esc_html_e('API Failure', 'wpsitesync-divi'); ?></span>
-								</div>
-								<div class="sync-divi-success-msg">
-									<?php esc_html_e('Successfully Synced Divi Settings.', 'wpsitesync-divi'); ?>
-								</div>
-								<div class="sync-divi-pull-notice">
-									<?php esc_html_e('Please install the WPSiteSync for Pull plugin to use the Pull features.', 'wpsitesync-divi'); ?>
-								</div>
+							<div style="display:none">
+								<span id="sync-divi-settings"><?php esc_html_e('Synchronizing Divi Settings...', 'wpsitesync-divi'); ?></span>
+								<span id="sync-divi-failure-msg"><?php esc_html_e('Failed to Sync Divi Settings.', 'wpsitesync-divi'); ?></span>
+								<span id="sync-divi-success-msg"><?php esc_html_e('Successfully Synced Divi Settings.', 'wpsitesync-divi'); ?></span>
+								<span id="sync-divi-pull-notice"><?php esc_html_e('Please install the WPSiteSync for Pull plugin to use the Pull features.', 'wpsitesync-divi'); ?></span>
 							</div>
 						<?php } else { // is_auth() ?>
 							<p>WPSiteSync&#8482; for Content is not configured with a valid Target. Please go to the
@@ -139,17 +133,29 @@ SyncDebug::log(__METHOD__ . '() operation="' . $operation . '"');
 //		if (!$license)
 //			return $found;
 
-		if ('pushdivi' === $operation) {
+		if ('pushdivisettings' === $operation) {
 SyncDebug::log(' - post=' . var_export($_POST, TRUE));
 
 			$ajax = WPSiteSync_Divi::get_instance()->load_class('diviajaxrequest', TRUE);
-			$ajax->push_divi($resp);
+			$ajax->push_divi_settings($resp);
 			$found = TRUE;
-		} else if ('pulldivi' === $operation) {
+		} else if ('pushdiviroles' === $operation) {
 SyncDebug::log(' - post=' . var_export($_POST, TRUE));
 
 			$ajax = WPSiteSync_Divi::get_instance()->load_class('diviajaxrequest', TRUE);
-			$ajax->pull_divi($resp);
+			$ajax->push_divi_roles($resp);
+			$found = TRUE;
+		} else if ('pulldivisettings' === $operation) {
+SyncDebug::log(' - post=' . var_export($_POST, TRUE));
+
+			$ajax = WPSiteSync_Divi::get_instance()->load_class('diviajaxrequest', TRUE);
+			$ajax->pull_divi_settings($resp);
+			$found = TRUE;
+		} else if ('pulldiviroles' === $operation) {
+SyncDebug::log(' - post=' . var_export($_POST, TRUE));
+
+			$ajax = WPSiteSync_Divi::get_instance()->load_class('diviajaxrequest', TRUE);
+			$ajax->pull_divi_roles($resp);
 			$found = TRUE;
 		}
 
