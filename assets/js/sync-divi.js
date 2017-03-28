@@ -10,6 +10,7 @@
 function WPSiteSyncContent_Divi()
 {
 	this.inited = false;
+	this.page = false;
 }
 
 /**
@@ -18,8 +19,8 @@ function WPSiteSyncContent_Divi()
 WPSiteSyncContent_Divi.prototype.init = function ()
 {
 	this.inited = true;
-	var page = this.get_param('page');
-	switch (page) {
+	this.page = this.get_param('page');
+	switch (this.page) {
 		case 'et_divi_options':
 			this.show_theme_ui();
 			break;
@@ -48,26 +49,10 @@ WPSiteSyncContent_Divi.prototype.get_param = function (name)
 };
 
 /**
- * Hides all messages within the Divi settings UI area
- * @returns {undefined}
- */
-WPSiteSyncContent_Divi.prototype.hide_msgs = function ()
-{
-	// TODO: rework to have a single message <div> that all messages are written into
-	jQuery('.sync-divi-msgs').hide();
-	jQuery('.sync-divi-loading-indicator').hide();
-	jQuery('.sync-divi-failure-msg').hide();
-	jQuery('.sync-divi-success-msg').hide();
-	jQuery('.sync-divi-pull-notice').hide();
-};
-
-/**
  * Shows the Sync UI area within the Divi Role Editor page
  */
 WPSiteSyncContent_Divi.prototype.show_role_editor_ui = function ()
 {
-	this.hide_msgs();
-
 	jQuery('#et_pb_save_roles').after(jQuery('#sync-divi-ui-container').html());
 };
 
@@ -76,10 +61,77 @@ WPSiteSyncContent_Divi.prototype.show_role_editor_ui = function ()
  */
 WPSiteSyncContent_Divi.prototype.show_theme_ui = function ()
 {
-	this.hide_msgs();
-
 	jQuery('#epanel-save-top').after(jQuery('#sync-divi-ui-container').html());
 };
+
+/**
+ * Callback for when the Push to Target button is clicked
+ */
+WPSiteSyncContent_Divi.prototype.push_handler = function ()
+{
+	if (false === this.page)
+		return;
+	this.push_divi();
+};
+
+/**
+ * Callback for when the Pull from Target button is clicked
+ */
+WPSiteSyncContent_Divi.prototype.pull_handler = function ()
+{
+	if (false === this.page)
+		return;
+	this.pull_divi();
+};
+
+/**
+ * Callback for the Pull from Target button is clicked and the Pull add-on is not active
+ */
+WPSiteSyncContent_Divi.prototype.pull_notice = function ()
+{
+	this.hide_msgs();
+	this.set_message('pull-notice');
+};
+
+/**
+ * Push Divi settings from target site
+ */
+WPSiteSyncContent_Divi.prototype.push_divi = function ()
+{
+	var operation;
+
+	switch (this.page) {
+		case 'et_divi_options':
+			operation = 'pushdivisettings';
+			break;
+		case 'et_divi_role_editor':
+			operation = 'pushdiviroles';
+			break;
+	}
+
+	wpsitesynccontent.inited = true;
+	wpsitesynccontent.api(operation, null, jQuery('#sync-divi-settings').text(), jQuery('#sync-divi-success-msg').text());
+}
+
+/**
+ * Pulls Divi settings from target site
+ */
+WPSiteSyncContent_Divi.prototype.pull_divi = function ()
+{
+	var operation;
+
+	switch (this.page) {
+		case 'et_divi_options':
+			operation = 'pulldivisettings';
+			break;
+		case 'et_divi_role_editor':
+			operation = 'pulldiviroles';
+			break;
+	}
+
+	wpsitesynccontent.inited = true;
+	wpsitesynccontent.api(operation, null, jQuery('#sync-divi-settings').text(), jQuery('#sync-divi-success-msg').text());
+}
 
 wpsitesynccontent.divi = new WPSiteSyncContent_Divi();
 

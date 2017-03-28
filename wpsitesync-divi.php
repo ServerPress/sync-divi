@@ -76,6 +76,9 @@ if (!class_exists('WPSiteSync_Divi')) {
 
 			add_filter('spectrom_sync_allowed_post_types', array($this, 'allowed_post_types'));
 			add_filter('spectrom_sync_tax_list', array($this, 'add_taxonomies'), 10, 1);
+			add_filter('spectrom_sync_api_request_action', array($this, 'api_request'), 20, 3); // called by SyncApiRequest
+			add_filter('spectrom_sync_api', array($this, 'api_controller_request'), 10, 3); // called by SyncApiController
+			add_action('spectrom_sync_api_request_response', array($this, 'api_response'), 10, 3); // called by SyncApiRequest->api()
 
 //			add_action('spectrom_sync_pre_push_content', array($this, 'pre_push_content'), 10, 4);
 //			add_action('spectrom_sync_push_content', array($this, 'handle_push'), 10, 3);
@@ -85,6 +88,51 @@ if (!class_exists('WPSiteSync_Divi')) {
 
 			add_filter('spectrom_sync_error_code_to_text', array($this, 'filter_error_codes'), 10, 2);
 			add_filter('spectrom_sync_notice_code_to_text', array($this, 'filter_notice_codes'), 10, 2);
+		}
+
+		/**
+		 * Checks the API request if the action is to pull/push the settings
+		 *
+		 * @param array $args The arguments array sent to SyncApiRequest::api()
+		 * @param string $action The API requested
+		 * @param array $remote_args Array of arguments sent to SyncApiRequest::api()
+		 * @return array The modified $args array, with any additional information added to it
+		 */
+		public function api_request($args, $action, $remote_args)
+		{
+			$this->_get_api_request();
+			$args = $this->_api_request->api_request($args, $action, $remote_args);
+
+			return $args;
+		}
+
+		/**
+		 * Handles the requests being processed on the Target from SyncApiController
+		 *
+		 * @param type $return
+		 * @param type $action
+		 * @param SyncApiResponse $response
+		 * @return bool $response
+		 */
+		public function api_controller_request($return, $action, SyncApiResponse $response)
+		{
+			$this->_get_api_request();
+			$return = $this->_api_request->api_controller_request($return, $action, $response);
+
+			return $return;
+		}
+
+		/**
+		 * Handles the request on the Source after API Requests are made and the response is ready to be interpreted
+		 *
+		 * @param string $action The API name, i.e. 'push' or 'pull'
+		 * @param array $remote_args The arguments sent to SyncApiRequest::api()
+		 * @param SyncApiResponse $response The response object after the API request has been made
+		 */
+		public function api_response($action, $remote_args, $response)
+		{
+			$this->_get_api_request();
+			$this->_api_request->api_response($action, $remote_args, $response);
 		}
 
 //		/**
@@ -199,8 +247,11 @@ if (!class_exists('WPSiteSync_Divi')) {
 		{
 			$this->_get_api_request();
 			switch ($code) {
-			case SyncDiviApiRequest::ERROR_DIVI:
-				$message = __('', 'wpsitesync-divi');
+			case SyncDiviApiRequest::ERROR_DIVI_SETTINGS_NOT_FOUND:
+				$message = __('Divi Settings were not found', 'wpsitesync-divi');
+				break;
+			case SyncDiviApiRequest::ERROR_DIVI_ROLES_NOT_FOUND:
+				$message = __('Divi Roles were not found', 'wpsitesync-divi');
 				break;
 			}
 			return $message;

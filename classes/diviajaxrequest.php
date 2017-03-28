@@ -34,7 +34,7 @@ class SyncDiviAjaxRequest extends SyncInput
 	public function push_divi_settings($resp)
 	{
 		$api = new SyncApiRequest();
-		$api_response = $api->api('pushdivisettings', $args);
+		$api_response = $api->api('pushdivisettings');
 
 		// copy contents of SyncApiResponse object from API call into the Response object for AJAX call
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - returned from api() call; copying response');
@@ -61,7 +61,7 @@ SyncDebug::log(' - error code: ' . $api_response->get_error_code());
 	public function push_divi_roles($resp)
 	{
 		$api = new SyncApiRequest();
-		$api_response = $api->api('pushdiviroles', $args);
+		$api_response = $api->api('pushdiviroles');
 
 		// copy contents of SyncApiResponse object from API call into the Response object for AJAX call
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - returned from api() call; copying response');
@@ -88,7 +88,7 @@ SyncDebug::log(' - error code: ' . $api_response->get_error_code());
 	public function pull_divi_settings($resp)
 	{
 		$api = new SyncApiRequest();
-		$api_response = $api->api('pulldivisettings', $args);
+		$api_response = $api->api('pulldivisettings');
 
 		// copy contents of SyncApiResponse object from API call into the Response object for AJAX call
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - returned from api() call; copying response');
@@ -115,7 +115,7 @@ SyncDebug::log(' - error code: ' . $api_response->get_error_code());
 	public function pull_divi_roles($resp)
 	{
 		$api = new SyncApiRequest();
-		$api_response = $api->api('pulldiviroles', $args);
+		$api_response = $api->api('pulldiviroles');
 
 		// copy contents of SyncApiResponse object from API call into the Response object for AJAX call
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - returned from api() call; copying response');

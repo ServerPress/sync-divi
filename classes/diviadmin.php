@@ -14,6 +14,7 @@ class SyncDiviAdmin
 	{
 		add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
 		add_action('admin_footer', array($this, 'print_hidden_div'));
+		add_action('spectrom_sync_ajax_operation', array($this, 'check_ajax_query'), 10, 3);
 	}
 
 	/**
