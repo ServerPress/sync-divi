@@ -37,19 +37,73 @@ SyncDebug::log(__METHOD__ . '() action=' . $action);
 SyncDebug::log(__METHOD__ . '() args=' . var_export($args, TRUE));
 
 			$push_data = array();
+			$tax_data = array();
 
-			$push_data['site_key'] = $args['auth']['site_key'];
 			$push_data['pull'] = FALSE;
-			$push_data['divi-settings'] = $this->_get_gdivi_settings_data($selected);
-SyncDebug::log(__METHOD__ . '() push_data=' . var_export($push_data, TRUE));
+			$push_data['divi-settings'] = get_option('et_divi');
 
+			if (array_key_exists('divi_menucats', $push_data['divi-settings'])) {
+				$categories = $push_data['divi-settings']['divi_menucats'];
+				foreach ($categories as $category) {
+					$term_data = get_term($category, 'category');
+					$tax_name = $term_data->taxonomy;
+					$tax_data['hierarchical'][] = $term_data;
+					$parent = $term_data->parent;
+					while (0 !== $parent) {
+						$term = get_term_by('id', $parent, $tax_name, OBJECT);
+						$tax_data['lineage'][$tax_name][] = $term;
+						$parent = $term->parent;
+					}
+				}
+				$push_data['divi-categories'] = $tax_data;
+			}
+
+			if (array_key_exists('divi_468_image', $push_data['divi-settings'])) {
+				$image = $push_data['divi-settings']['divi_468_image'];
+SyncDebug::log(__METHOD__ . '() found image=' . var_export($image, TRUE));
+
+				if (! empty($image)) {
+					if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
+SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($image, TRUE));
+						$api = new SyncApiRequest();
+						$api->send_media($image, 0, 0, 0);
+					}
+				}
+			}
+
+			if (array_key_exists('divi_favico', $push_data['divi-settings'])) {
+				$image = $push_data['divi-settings']['divi_favico'];
+SyncDebug::log(__METHOD__ . '() found image=' . var_export($image, TRUE));
+
+				if (!empty($image)) {
+					if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
+SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($image, TRUE));
+						$api = new SyncApiRequest();
+						$api->send_media($image, 0, 0, 0);
+					}
+				}
+			}
+
+			if (array_key_exists('divi_logo', $push_data['divi-settings'])) {
+				$image = $push_data['divi-settings']['divi_logo'];
+SyncDebug::log(__METHOD__ . '() found image=' . var_export($image, TRUE));
+
+				if (!empty($image)) {
+					if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
+SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($image, TRUE));
+						$api = new SyncApiRequest();
+						$api->send_media($image, 0, 0, 0);
+					}
+				}
+			}
+
+SyncDebug::log(__METHOD__ . '() push_data=' . var_export($push_data, TRUE));
 			$args['push_data'] = $push_data;
 		} else if ('pushdiviroles' === $action) {
 SyncDebug::log(__METHOD__ . '() args=' . var_export($args, TRUE));
 
 			$push_data = array();
 
-			//$push_data['site_key'] = $args['auth']['site_key'];
 			$push_data['pull'] = FALSE;
 			$push_data['divi-roles'] = get_option('et_pb_role_settings');
 SyncDebug::log(__METHOD__ . '() push_data=' . var_export($push_data, TRUE));
@@ -88,19 +142,51 @@ SyncDebug::log(__METHOD__ . '() found push_data information: ' . var_export($thi
 				return TRUE;            // return, signaling that the API request was processed
 			}
 
-//			foreach ($this->_push_data['divi-settings'] as $setting) {
-//				switch ($setting['option_key']) {
-//				case 'genesis-settings':
-//					$key = apply_filters('genesis_settings_field', $setting['option_key']);
-//					break;
-//				case 'genesis-seo-settings':
-//					$key = apply_filters('genesis_seo_settings_field', $setting['option_key']);
-//					break;
-//				default:
-//					$key = $setting['option_key'];
-//					break;
-//				}
-//			}
+			foreach ($this->_push_data['divi-settings'] as $setting_key => $settings) {
+				if (empty($settings)) continue;
+
+				switch ($setting_key) {
+				case 'divi_menupages':
+					// look up the Target page IDs using SyncModel->get_sync_data()
+					$model = new SyncModel();
+					foreach ($settings as $key => $page_id) {
+SyncDebug::log(__METHOD__ . '() found menu page: ' . var_export($page_id, TRUE));
+						$sync_data = $model->get_sync_data($page_id);
+						if (NULL === $sync_data) {
+							// @todo look up by title
+
+							// if page title is found, replace id
+							// @todo
+
+							// otherwise unset array key
+							unset($this->_push_data['divi-settings']['divi_menupages'][$key]);
+						} else {
+							// replace id with new id
+SyncDebug::log(__METHOD__ . '() replace with: ' . var_export($sync_data->target_content_id, TRUE));
+							$settings[$key] = $sync_data->target_content_id;
+						}
+					}
+					$this->_push_data['divi-settings']['divi_menupages'] = $settings;
+					break;
+				case 'divi_menucats':
+					// for each category ID, get the new category ID and replace it.
+					// @todo New terms should already have been added during the push API action. (not done during save option?)
+					foreach ($settings as $key => $cat_id) {
+SyncDebug::log(__METHOD__ . '() found menu category: ' . var_export($cat_id, TRUE));
+						foreach ($this->_push_data['divi-categories']['hierarchical'] as $index => $cat) {
+							if ($cat_id === $cat['term_id']) {
+								$name = $this->_push_data['divi-categories']['hierarchical'][$index]['name'];
+SyncDebug::log(__METHOD__ . '() term name: ' . var_export($name, TRUE));
+							}
+						}
+						$term = get_term_by('name', $name, 'category');
+						$settings[$key] = $term->term_id;
+SyncDebug::log(__METHOD__ . '() new term id: ' . var_export($term->term_id, TRUE));
+					}
+					$this->_push_data['divi-settings']['divi_menucats'] = $settings;
+					break;
+				}
+			}
 
 			update_option('et_divi', $this->_push_data['divi-settings']);
 
