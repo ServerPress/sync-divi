@@ -11,6 +11,7 @@ function WPSiteSyncContent_Divi()
 {
 	this.inited = false;
 	this.page = false;
+	this.disable = false;
 }
 
 /**
@@ -20,6 +21,24 @@ WPSiteSyncContent_Divi.prototype.init = function ()
 {
 	this.inited = true;
 	this.page = this.get_param('page');
+
+	var _self = this,
+		target = document.querySelector('#et_pb_main_container'),
+		config = {attributes: false, childList: true, characterData: false, subtree: true},
+		observer = new MutationObserver(function (mutations)
+		{
+			mutations.forEach(function (mutation)
+			{
+				_self.on_content_change();
+				observer.disconnect();
+			});
+		});
+
+	setTimeout(function ()
+	{
+		observer.observe(target, config);
+	}, 5000);
+
 	switch (this.page) {
 		case 'et_divi_options':
 			this.show_theme_ui();
@@ -47,6 +66,18 @@ WPSiteSyncContent_Divi.prototype.get_param = function (name)
 		return '';
 	return decodeURIComponent(results[2].replace(/\+/g, " "));
 };
+
+/**
+ * Disables Sync Button every time the content changes.
+ */
+WPSiteSyncContent_Divi.prototype.on_content_change = function ()
+{
+	this.disable = true;
+	jQuery('#sync-content').attr('disabled', true);
+	wpsitesynccontent.set_message(jQuery('#sync-msg-update-changes').html());
+	jQuery('#disabled-notice-sync').show();
+};
+
 
 /**
  * Shows the Sync UI area within the Divi Role Editor page

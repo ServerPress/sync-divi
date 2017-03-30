@@ -43,7 +43,7 @@ class SyncDiviAdmin
 		wp_register_script('sync-divi', WPSiteSync_Divi::get_asset('js/sync-divi.js'), array('sync'), WPSiteSync_Divi::PLUGIN_VERSION, TRUE);
 		wp_register_style('sync-divi', WPSiteSync_Divi::get_asset('css/sync-divi.css'), array('sync-admin'), WPSiteSync_Divi::PLUGIN_VERSION);
 
-		if (in_array($hook, array('toplevel_page_et_divi_options', 'divi_page_et_divi_role_editor'))) {
+		if (in_array($hook, array('toplevel_page_et_divi_options', 'divi_page_et_divi_role_editor', 'post.php'))) {
 
 			$theme = wp_get_theme();
 			if ('toplevel_page_et_divi_options' === $hook && ('Divi' !== $theme->name && 'Divi' !== $theme->parent_theme)) {

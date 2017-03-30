@@ -376,6 +376,24 @@ SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' no data found in Pull response 
 			}
 		}
 	}
+
+	/**
+	 * Callback for 'spectrom_sync_media_processed', called from SyncApiController->upload_media()
+	 *
+	 * @param int $target_post_id The Post ID of the Content being pushed
+	 * @param int $attach_id The attachment's ID
+	 * @param int $media_id The media id
+	 */
+	public function media_processed($target_post_id, $attach_id, $media_id)
+	{
+SyncDebug::log(__METHOD__ . "({$target_post_id}, {$attach_id}, {$media_id}):" . __LINE__ . ' post= ' . var_export($_POST, TRUE));
+
+		// process option values - divi_468_image, divi_logo, divi_favicon
+		// Use $_POST[‘img_url’] during the action to get the old URL 
+		// Use the $media_id passed as an action parameter to get the new URL with wp_get_attachment_url($media_id)
+		// replace URL
+		// update et_divi option
+	}
 }
 
 // EOF

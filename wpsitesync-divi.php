@@ -83,8 +83,7 @@ if (!class_exists('WPSiteSync_Divi')) {
 //			add_action('spectrom_sync_pre_push_content', array($this, 'pre_push_content'), 10, 4);
 //			add_action('spectrom_sync_push_content', array($this, 'handle_push'), 10, 3);
 //			add_filter('spectrom_sync_api_push_content', array($this, 'filter_push_content'), 10, 2);
-//			add_filter('spectrom_sync_api_arguments', array($this, 'api_arguments'), 10, 2);
-//			add_action('spectrom_sync_media_processed', array($this, 'media_processed'), 10, 3);
+			add_action('spectrom_sync_media_processed', array($this, 'media_processed'), 10, 3);
 
 			add_filter('spectrom_sync_error_code_to_text', array($this, 'filter_error_codes'), 10, 2);
 			add_filter('spectrom_sync_notice_code_to_text', array($this, 'filter_notice_codes'), 10, 2);
@@ -175,33 +174,17 @@ if (!class_exists('WPSiteSync_Divi')) {
 //			$this->_api_request->handle_push($target_post_id, $post_data, $response);
 //		}
 
-//		/**
-//		 * Callback for 'spectrom_sync_media_processed', called from SyncApiController->upload_media()
-//		 * @param int $target_post_id The Post ID of the Content being pushed
-//		 * @param int $attach_id The attachment's ID
-//		 * @param int $media_id The media id
-//		 */
-//		public function media_processed($target_post_id, $attach_id, $media_id)
-//		{
-//			$this->_get_api_request();
-//			$this->_api_request->media_processed($target_post_id, $attach_id, $media_id);
-//		}
-
-//		/**
-//		 * Adds arguments to api remote args
-//		 *
-//		 * @param array $remote_args Array of arguments sent to SyncRequestApi::api()
-//		 * @param $action The API requested
-//		 * @return array The returned remote arguments
-//		 */
-//		public function api_arguments($remote_args, $action)
-//		{
-//			$this->_get_api_request();
-//			if ('pushwoocommerce' === $action || 'pullwoocommerce' === $action) {
-//				$remote_args['headers'][SyncWooCommerceApiRequest::HEADER_WOOCOMMERCE_VERSION] = WC()->version;
-//			}
-//			return $remote_args;
-//		}
+		/**
+		 * Callback for 'spectrom_sync_media_processed', called from SyncApiController->upload_media()
+		 * @param int $target_post_id The Post ID of the Content being pushed
+		 * @param int $attach_id The attachment's ID
+		 * @param int $media_id The media id
+		 */
+		public function media_processed($target_post_id, $attach_id, $media_id)
+		{
+			$this->_get_api_request();
+			$this->_api_request->media_processed($target_post_id, $attach_id, $media_id);
+		}
 
 		/**
 		 * Add Divi related post types to allowed post types
