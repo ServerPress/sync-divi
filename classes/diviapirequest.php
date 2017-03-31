@@ -40,6 +40,7 @@ SyncDebug::log(__METHOD__ . '() args=' . var_export($args, TRUE));
 			$tax_data = array();
 
 			$push_data['pull'] = FALSE;
+			$push_data['site-key'] = $args['auth']['site_key'];
 			$push_data['divi-settings'] = get_option('et_divi');
 
 			if (array_key_exists('divi_menucats', $push_data['divi-settings'])) {
@@ -151,15 +152,11 @@ SyncDebug::log(__METHOD__ . '() found push_data information: ' . var_export($thi
 					$model = new SyncModel();
 					foreach ($settings as $key => $page_id) {
 SyncDebug::log(__METHOD__ . '() found menu page: ' . var_export($page_id, TRUE));
-						$sync_data = $model->get_sync_data($page_id);
+						$sync_data = $model->get_sync_data($page_id, $this->_push_data['site-key']);
+SyncDebug::log(__METHOD__ . '() found sync data: ' . var_export($sync_data, TRUE));
 						if (NULL === $sync_data) {
-							// @todo look up by title
-
-							// if page title is found, replace id
-							// @todo
-
-							// otherwise unset array key
-							unset($this->_push_data['divi-settings']['divi_menupages'][$key]);
+							// unset array key
+							unset($settings[$key]);
 						} else {
 							// replace id with new id
 SyncDebug::log(__METHOD__ . '() replace with: ' . var_export($sync_data->target_content_id, TRUE));
@@ -170,18 +167,31 @@ SyncDebug::log(__METHOD__ . '() replace with: ' . var_export($sync_data->target_
 					break;
 				case 'divi_menucats':
 					// for each category ID, get the new category ID and replace it.
-					// @todo New terms should already have been added during the push API action. (not done during save option?)
 					foreach ($settings as $key => $cat_id) {
 SyncDebug::log(__METHOD__ . '() found menu category: ' . var_export($cat_id, TRUE));
 						foreach ($this->_push_data['divi-categories']['hierarchical'] as $index => $cat) {
 							if ($cat_id === $cat['term_id']) {
 								$name = $this->_push_data['divi-categories']['hierarchical'][$index]['name'];
 SyncDebug::log(__METHOD__ . '() term name: ' . var_export($name, TRUE));
+								$term_index = $index;
 							}
 						}
 						$term = get_term_by('name', $name, 'category');
-						$settings[$key] = $term->term_id;
-SyncDebug::log(__METHOD__ . '() new term id: ' . var_export($term->term_id, TRUE));
+
+						// add new term if it doesn't exist
+						if (FALSE === $term) {
+							$term_id = SyncApiController::get_instance()->process_hierarchical_term($this->_push_data['divi-categories']['hierarchical'][$term_index], $this->_push_data['divi-categories']['hierarchical']);
+						} else {
+							$term_id = $term->term_id;
+						}
+
+						if (0 !== $term_id) {
+SyncDebug::log(__METHOD__ . '() new term id: ' . var_export($term_id, TRUE));
+							$settings[$key] = $term_id;
+						} else {
+							unset($settings[$key]);
+						}
+
 					}
 					$this->_push_data['divi-settings']['divi_menucats'] = $settings;
 					break;
