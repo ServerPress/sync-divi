@@ -47,60 +47,8 @@ SyncDebug::log(__METHOD__ . '() args=' . var_export($args, TRUE));
 			$api = WPSiteSync_Divi::get_instance()->get_api();
 			$api->set_source_domain(site_url());
 
-			if (array_key_exists('divi_menucats', $push_data['divi-settings'])) {
-				$categories = $push_data['divi-settings']['divi_menucats'];
-				foreach ($categories as $category) {
-					$term_data = get_term($category, 'category');
-					$tax_name = $term_data->taxonomy;
-					$tax_data['hierarchical'][] = $term_data;
-					$parent = $term_data->parent;
-					while (0 !== $parent) {
-						$term = get_term_by('id', $parent, $tax_name, OBJECT);
-						$tax_data['lineage'][$tax_name][] = $term;
-						$parent = $term->parent;
-					}
-				}
-				$push_data['divi-categories'] = $tax_data;
-			}
-
-			if (array_key_exists('divi_468_image', $push_data['divi-settings'])) {
-				$image = $push_data['divi-settings']['divi_468_image'];
-SyncDebug::log(__METHOD__ . '() found image=' . var_export($image, TRUE));
-
-				if (! empty($image)) {
-					if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
-SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($image, TRUE));
-						$image_id = attachment_url_to_postid($image);
-						$api->send_media($image, 0, 0, $image_id);
-					}
-				}
-			}
-
-			if (array_key_exists('divi_favicon', $push_data['divi-settings'])) {
-				$image = $push_data['divi-settings']['divi_favicon'];
-SyncDebug::log(__METHOD__ . '() found image=' . var_export($image, TRUE));
-
-				if (!empty($image)) {
-					if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
-SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($image, TRUE));
-						$image_id = attachment_url_to_postid($image);
-						$api->send_media($image, 0, 0, $image_id);
-					}
-				}
-			}
-
-			if (array_key_exists('divi_logo', $push_data['divi-settings'])) {
-				$image = $push_data['divi-settings']['divi_logo'];
-SyncDebug::log(__METHOD__ . '() found image=' . var_export($image, TRUE));
-
-				if (!empty($image)) {
-					if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
-SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($image, TRUE));
-						$image_id = attachment_url_to_postid($image);
-						$api->send_media($image, 0, 0, $image_id);
-					}
-				}
-			}
+			$push_data = $this->_get_taxonomies($push_data, $tax_data);
+			$this->_get_media($push_data, $api);
 
 SyncDebug::log(__METHOD__ . '() push_data=' . var_export($push_data, TRUE));
 			$args['push_data'] = $push_data;
@@ -227,7 +175,13 @@ SyncDebug::log(__METHOD__ . '() found push_data information: ' . var_export($thi
 		} else if ('pulldivisettings' === $action) {
 
 			$pull_data = array();
-			$pull_data['divi-settings'] = $this->_get_divi_settings_data();
+			$tax_data = array();
+			$pull_data['divi-settings'] = get_option('et_divi');
+			$api = WPSiteSync_Divi::get_instance()->get_api();
+			$api->set_source_domain(site_url());
+
+			$pull_data = $this->_get_taxonomies($pull_data, $tax_data);
+			$this->_get_media($pull_data, $api);
 
 			$response->set('pull_data', $pull_data); // add all the post information to the ApiResponse object
 			$response->set('site_key', SyncOptions::get('site_key'));
@@ -321,6 +275,7 @@ SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - pull data=' . var_export($pul
 
 				$_POST['push_data'] = $pull_data;
 				$_POST['action'] = 'pushdivisettings';
+				$_POST['pull_media'] = $pull_data['pull_media'];
 
 				$args = array(
 					'action' => 'pushdivisettings',
@@ -335,6 +290,11 @@ SyncDebug::log(__METHOD__ . '() creating controller with: ' . var_export($args, 
 				$this->_push_controller = new SyncApiController($args);
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - returned from controller');
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - response=' . var_export($response, TRUE));
+
+//				if (isset($_POST['pull_media'])) {
+//SyncDebug::log(__METHOD__ . '() - found ' . count($_POST['pull_media']) . ' media items');
+//					$this->_handle_media(intval($_POST['post_id']), $_POST['pull_media'], $response);
+//				}
 
 				$_POST = $save_post;
 
@@ -497,7 +457,7 @@ SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($id, TRUE)
 
 		// add media to queue
 		// @todo 'bg_img_1' - can have unlimited # with suffix # increasing
-		if (preg_match_all('/(src|mp4|webm|audio|image_url|image|url)="(?P<src>\w+[."]*)"/i', $content, $matches)) {
+		if (preg_match_all('/(src|mp4|webm|audio|image_url|image|url)="(?P<src>\w+[^"]*)"/i', $content, $matches)) {
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' matches=' . var_export($matches, TRUE));
 			foreach (array_unique($matches['src']) as $src) {
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' src=' . var_export($src, TRUE));
@@ -580,6 +540,84 @@ SyncDebug::log(__METHOD__ . '() new term id: ' . var_export($term_id, TRUE));
 		$ids = implode(',', $ids);
 
 		return str_replace($matches['ids'], $ids, $matches[0]);
+	}
+
+	/**
+	 * Get Taxonomies
+	 *
+	 * @since 1.0.0
+	 * @param $push_data
+	 * @param $tax_data
+	 * @return mixed
+	 */
+	private function _get_taxonomies($push_data, $tax_data)
+	{
+		if (array_key_exists('divi_menucats', $push_data['divi-settings'])) {
+			$categories = $push_data['divi-settings']['divi_menucats'];
+			foreach ($categories as $category) {
+				$term_data = get_term($category, 'category');
+				$tax_name = $term_data->taxonomy;
+				$tax_data['hierarchical'][] = $term_data;
+				$parent = $term_data->parent;
+				while (0 !== $parent) {
+					$term = get_term_by('id', $parent, $tax_name, OBJECT);
+					$tax_data['lineage'][$tax_name][] = $term;
+					$parent = $term->parent;
+				}
+			}
+			$push_data['divi-categories'] = $tax_data;
+		}
+		return $push_data;
+	}
+
+	/**
+	 * Get Media
+	 *
+	 * @since 1.0.0
+	 * @param $push_data
+	 * @param $api
+	 */
+	private function _get_media($push_data, $api)
+	{
+SyncDebug::log(__METHOD__ . '() found push data=' . var_export($push_data, TRUE));
+		if (array_key_exists('divi_468_image', $push_data['divi-settings'])) {
+			$image = $push_data['divi-settings']['divi_468_image'];
+SyncDebug::log(__METHOD__ . '() found image=' . var_export($image, TRUE));
+
+			if (!empty($image)) {
+				if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
+SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($image, TRUE));
+					$image_id = attachment_url_to_postid($image);
+					$api->send_media($image, 0, 0, $image_id);
+				}
+			}
+		}
+
+		if (array_key_exists('divi_favicon', $push_data['divi-settings'])) {
+			$image = $push_data['divi-settings']['divi_favicon'];
+SyncDebug::log(__METHOD__ . '() found image=' . var_export($image, TRUE));
+
+			if (!empty($image)) {
+				if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
+SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($image, TRUE));
+					$image_id = attachment_url_to_postid($image);
+					$api->send_media($image, 0, 0, $image_id);
+				}
+			}
+		}
+
+		if (array_key_exists('divi_logo', $push_data['divi-settings'])) {
+			$image = $push_data['divi-settings']['divi_logo'];
+SyncDebug::log(__METHOD__ . '() found image=' . var_export($image, TRUE));
+
+			if (!empty($image)) {
+				if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
+SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($image, TRUE));
+					$image_id = attachment_url_to_postid($image);
+					$api->send_media($image, 0, 0, $image_id);
+				}
+			}
+		}
 	}
 }
 
