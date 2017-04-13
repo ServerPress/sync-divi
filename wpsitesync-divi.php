@@ -199,7 +199,7 @@ if (!class_exists('WPSiteSync_Divi')) {
 		public function allowed_post_types($post_types)
 		{
 			$post_types[] = 'project';
-			$post_types[] = 'et_pub_layout';
+			$post_types[] = 'et_pb_layout';
 			return $post_types;
 		}
 
