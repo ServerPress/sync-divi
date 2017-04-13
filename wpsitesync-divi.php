@@ -22,6 +22,7 @@ if (!class_exists('WPSiteSync_Divi')) {
 	{
 		private static $_instance = NULL;
 		private $_api_request = NULL;
+		private $_api = NULL;
 
 		const PLUGIN_NAME = 'WPSiteSync for Divi';
 		const PLUGIN_VERSION = '1.0';
@@ -78,12 +79,11 @@ if (!class_exists('WPSiteSync_Divi')) {
 			add_filter('spectrom_sync_tax_list', array($this, 'add_taxonomies'), 10, 1);
 			add_filter('spectrom_sync_api_request_action', array($this, 'api_request'), 20, 3); // called by SyncApiRequest
 			add_filter('spectrom_sync_api', array($this, 'api_controller_request'), 10, 3); // called by SyncApiController
-			add_action('spectrom_sync_api_request_response', array($this, 'api_response'), 10, 3); // called by SyncApiRequest->api()
-
-//			add_action('spectrom_sync_pre_push_content', array($this, 'pre_push_content'), 10, 4);
-//			add_action('spectrom_sync_push_content', array($this, 'handle_push'), 10, 3);
-//			add_filter('spectrom_sync_api_push_content', array($this, 'filter_push_content'), 10, 2);
+			add_filter('spectrom_sync_upload_media_allowed_mime_type', array($this, 'filter_allowed_mime_type'), 10, 2);
+			add_filter('spectrom_sync_api_push_content', array($this, 'filter_push_content'), 10, 2);
+			add_action('spectrom_sync_push_content', array($this, 'handle_push'), 10, 3);
 			add_action('spectrom_sync_media_processed', array($this, 'media_processed'), 10, 3);
+			add_action('spectrom_sync_api_request_response', array($this, 'api_response'), 10, 3); // called by SyncApiRequest->api()
 
 			add_filter('spectrom_sync_error_code_to_text', array($this, 'filter_error_codes'), 10, 2);
 			add_filter('spectrom_sync_notice_code_to_text', array($this, 'filter_notice_codes'), 10, 2);
@@ -134,45 +134,48 @@ if (!class_exists('WPSiteSync_Divi')) {
 			$this->_api_request->api_response($action, $remote_args, $response);
 		}
 
-//		/**
-//		 * Callback for filtering the post data before it's sent to the Target. Here we check for additional data needed.
-//		 * @param array $data The data being Pushed to the Target machine
-//		 * @param SyncApiRequest $apirequest Instance of the API Request object
-//		 * @return array The modified data
-//		 */
-//		public function filter_push_content($data, $apirequest)
-//		{
-//			$this->_get_api_request();
-//			$data = $this->_api_request->filter_push_content($data, $apirequest);
-//
-//			return $data;
-//		}
+		/**
+		 * Callback for filtering the post data before it's sent to the Target. Here we check for additional data needed.
+		 * @param array $data The data being Pushed to the Target machine
+		 * @param SyncApiRequest $apirequest Instance of the API Request object
+		 * @return array The modified data
+		 */
+		public function filter_push_content($data, $apirequest)
+		{
+			$this->_get_api_request();
+			$data = $this->_api_request->filter_push_content($data, $apirequest);
 
-//		/**
-//		 * Check that everything is ready for us to process the Content Push operation on the Target
-//		 * @param array $post_data The post data for the current Push
-//		 * @param int $source_post_id The post ID on the Source
-//		 * @param int $target_post_id The post ID on the Target
-//		 * @param SyncApiResponse $response The API Response instance for the current API operation
-//		 */
-//		public function pre_push_content($post_data, $source_post_id, $target_post_id, $response)
-//		{
-//SyncDebug::log(__METHOD__ . '() source id=' . $source_post_id);
-//			$this->_get_api_request();
-//			$this->_api_request->pre_push_content($post_data, $source_post_id, $target_post_id, $response);
-//		}
+			return $data;
+		}
 
-//		/**
-//		 * Handles the processing of Push requests in response to an API call on the Target
-//		 * @param int $target_post_id The post ID of the Content on the Target
-//		 * @param array $post_data The array of post content information sent via the API request
-//		 * @param SyncApiResponse $response The response object used to reply to the API call
-//		 */
-//		public function handle_push($target_post_id, $post_data, SyncApiResponse $response)
-//		{
-//			$this->_get_api_request();
-//			$this->_api_request->handle_push($target_post_id, $post_data, $response);
-//		}
+		/**
+		 * Handles the processing of Push requests in response to an API call on the Target
+		 * @param int $target_post_id The post ID of the Content on the Target
+		 * @param array $post_data The array of post content information sent via the API request
+		 * @param SyncApiResponse $response The response object used to reply to the API call
+		 */
+		public function handle_push($target_post_id, $post_data, SyncApiResponse $response)
+		{
+			$this->_get_api_request();
+			$this->_api_request->handle_push($target_post_id, $post_data, $response);
+		}
+
+		/**
+		 * Filter the allowed mime type in upload_media
+		 *
+		 * @since 1.0.0
+		 * @param $default
+		 * @param $img_type
+		 * @return string
+		 */
+		public function filter_allowed_mime_type($default, $img_type)
+		{
+			if (in_array($img_type['type'], get_allowed_mime_types())) {
+				return TRUE;
+			}
+
+			return $default;
+		}
 
 		/**
 		 * Callback for 'spectrom_sync_media_processed', called from SyncApiController->upload_media()
@@ -255,6 +258,18 @@ if (!class_exists('WPSiteSync_Divi')) {
 				break;
 			}
 			return $message;
+		}
+
+		/**
+		 * Retrieve a single copy of the SyncApiRequest class
+		 * @return SyncApiRequest instance of the class
+		 */
+		public function get_api()
+		{
+			if (NULL === $this->_api) {
+				$this->_api = new SyncApiRequest();
+			}
+			return $this->_api;
 		}
 
 		/**

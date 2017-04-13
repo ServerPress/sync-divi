@@ -9,6 +9,7 @@
 class SyncDiviApiRequest extends SyncInput
 {
 	private $_push_data;
+	private $_post_data;
 
 	const ERROR_DIVI_SETTINGS_NOT_FOUND = 900;
 	const ERROR_DIVI_ROLES_NOT_FOUND = 901;
@@ -41,7 +42,10 @@ SyncDebug::log(__METHOD__ . '() args=' . var_export($args, TRUE));
 
 			$push_data['pull'] = FALSE;
 			$push_data['site-key'] = $args['auth']['site_key'];
+			$push_data['source_domain'] = site_url();
 			$push_data['divi-settings'] = get_option('et_divi');
+			$api = WPSiteSync_Divi::get_instance()->get_api();
+			$api->set_source_domain(site_url());
 
 			if (array_key_exists('divi_menucats', $push_data['divi-settings'])) {
 				$categories = $push_data['divi-settings']['divi_menucats'];
@@ -66,21 +70,21 @@ SyncDebug::log(__METHOD__ . '() found image=' . var_export($image, TRUE));
 				if (! empty($image)) {
 					if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
 SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($image, TRUE));
-						$api = new SyncApiRequest();
-						$api->send_media($image, 0, 0, 0);
+						$image_id = attachment_url_to_postid($image);
+						$api->send_media($image, 0, 0, $image_id);
 					}
 				}
 			}
 
-			if (array_key_exists('divi_favico', $push_data['divi-settings'])) {
-				$image = $push_data['divi-settings']['divi_favico'];
+			if (array_key_exists('divi_favicon', $push_data['divi-settings'])) {
+				$image = $push_data['divi-settings']['divi_favicon'];
 SyncDebug::log(__METHOD__ . '() found image=' . var_export($image, TRUE));
 
 				if (!empty($image)) {
 					if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
 SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($image, TRUE));
-						$api = new SyncApiRequest();
-						$api->send_media($image, 0, 0, 0);
+						$image_id = attachment_url_to_postid($image);
+						$api->send_media($image, 0, 0, $image_id);
 					}
 				}
 			}
@@ -92,8 +96,8 @@ SyncDebug::log(__METHOD__ . '() found image=' . var_export($image, TRUE));
 				if (!empty($image)) {
 					if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
 SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($image, TRUE));
-						$api = new SyncApiRequest();
-						$api->send_media($image, 0, 0, 0);
+						$image_id = attachment_url_to_postid($image);
+						$api->send_media($image, 0, 0, $image_id);
 					}
 				}
 			}
@@ -137,6 +141,10 @@ SyncDebug::log(__METHOD__ . "() handling '{$action}' action");
 
 			$this->_push_data = $this->post_raw('push_data', array());
 SyncDebug::log(__METHOD__ . '() found push_data information: ' . var_export($this->_push_data, TRUE));
+
+			// set source domain- needed for handling media operations
+			WPSiteSync_Divi::get_instance()->get_api()->set_source_domain($this->_push_data['source_domain']);
+SyncDebug::log(__METHOD__ . '() source domain: ' . var_export($this->_push_data['source_domain'], TRUE));
 
 			if (empty($this->_push_data['divi-settings'])) {
 				$response->error_code(SyncDiviApiRequest::ERROR_DIVI_SETTINGS_NOT_FOUND);
@@ -197,6 +205,8 @@ SyncDebug::log(__METHOD__ . '() new term id: ' . var_export($term_id, TRUE));
 					break;
 				}
 			}
+
+			$this->_push_data['divi-settings'] = str_replace(SyncApiController::get_instance()->source, site_url(), $this->_push_data['divi-settings']);
 
 			update_option('et_divi', $this->_push_data['divi-settings']);
 
@@ -398,11 +408,178 @@ SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' no data found in Pull response 
 	{
 SyncDebug::log(__METHOD__ . "({$target_post_id}, {$attach_id}, {$media_id}):" . __LINE__ . ' post= ' . var_export($_POST, TRUE));
 
-		// process option values - divi_468_image, divi_logo, divi_favicon
-		// Use $_POST[‘img_url’] during the action to get the old URL 
-		// Use the $media_id passed as an action parameter to get the new URL with wp_get_attachment_url($media_id)
-		// replace URL
-		// update et_divi option
+		// if Divi gallery, update the id
+		$gallery = $this->post_int('divi_gallery', 0);
+
+		if (1 === $gallery) {
+SyncDebug::log(__METHOD__ . ' processing gallery');
+			$old_attach_id = $this->post_int('attach_id', 0);
+			$content = get_post($target_post_id)->post_content;
+			$content = preg_replace("/(gallery_ids=.*){$old_attach_id}(.*\")/", "\${1}{$media_id}\${2}", $content);
+			wp_update_post(array('post_id' => $target_post_id, 'post_content' => $content));
+			return;
+		}
+	}
+
+	/**
+	 * Callback used to add additional fields tp the data being sent with an image upload
+	 * @param array $fields An array of data fields being sent with the image in an 'upload_media' API call
+	 * @return array The modified media data
+	 */
+	public function filter_upload_media_fields_gallery($fields)
+	{
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' media fields= ' . var_export($fields, TRUE));
+		$fields['divi_gallery'] = 1;
+		return $fields;
+	}
+
+	/**
+	 * Handles processing of Divi data for Push operations
+	 * @param array $data The data being Pushed to the Target machine
+	 * @param SyncApiRequest $apirequest Instance of the API Request object
+	 * @return array The modified data
+	 */
+	public function filter_push_content($data, SyncApiRequest $apirequest)
+	{
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' processing');
+
+		$apirequest->set_source_domain(site_url());
+		$push_tax_data = array();
+
+		$post_id = 0;
+		if (isset($data['post_id']))                        // present on Push operations
+			$post_id = abs($data['post_id']);
+		else if (isset($data['post_data']['ID']))            // present on Pull operations
+			$post_id = abs($data['post_data']['ID']);
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' post id=' . $post_id);
+
+		$content = $data['post_data']['post_content'];
+
+		// add all taxonomies to push data
+		if (preg_match_all('/include_categories="(?P<ids>\w+[^"]*)"/i', $content, $matches)) {
+			$ids = array();
+			foreach ($matches['ids'] as $match) {
+				$ids = array_unique( array_merge( $ids, explode(',', str_replace(' ', '', $match))));
+			}
+
+			foreach ($ids as $category) {
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' including cat=' . var_export($category, TRUE));
+				$term_data = get_term($category);
+
+				$tax_name = $term_data->taxonomy;
+				$push_tax_data['hierarchical'][] = $term_data;
+				$parent = $term_data->parent;
+				while (0 !== $parent) {
+					$term = get_term_by('id', $parent, $tax_name, OBJECT);
+					$push_tax_data['lineage'][$tax_name][] = $term;
+					$parent = $term->parent;
+				}
+			}
+		}
+
+		// add gallery media to queue
+		if (preg_match_all('/gallery_ids="(?P<ids>\w+[^"]*)"/i', $content, $matches)) {
+
+			$ids = array();
+			foreach ($matches['ids'] as $match) {
+				$ids = array_unique(array_merge($ids, explode(',', str_replace(' ', '', $match))));
+			}
+
+			foreach ($ids as $id) {
+SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($id, TRUE));
+				$url = wp_get_attachment_image_url($id, 'full');
+				add_filter('spectrom_sync_upload_media_fields', array($this, 'filter_upload_media_fields_gallery'), 10, 1);
+				$apirequest->send_media($url, $post_id, 0, $id);
+				remove_filter('spectrom_sync_upload_media_fields', array($this, 'filter_upload_media_fields_gallery'));
+			}
+
+		}
+
+		// add media to queue
+		// @todo 'bg_img_1' - can have unlimited # with suffix # increasing
+		if (preg_match_all('/(src|mp4|webm|audio|image_url|image|url)="(?P<src>\w+[."]*)"/i', $content, $matches)) {
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' matches=' . var_export($matches, TRUE));
+			foreach (array_unique($matches['src']) as $src) {
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' src=' . var_export($src, TRUE));
+
+				if (!empty($src)) {
+					if (parse_url($src, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
+SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($src, TRUE));
+						$image_id = attachment_url_to_postid($src);
+						$apirequest->send_media($src, $post_id, 0, $image_id);
+					}
+				}
+			}
+		}
+
+		if (! empty($push_tax_data)) $data['post_data']['divi-categories'] = $push_tax_data;
+
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' filtered push data=' . var_export($data, TRUE));
+
+		return $data;
+	}
+
+	/**
+	 * Handles fix up of data on the Target after SyncApiController has finished processing Content.
+	 * @param int $target_post_id The post ID being created/updated via API call
+	 * @param array $post_data Post data sent via API call
+	 * @param SyncApiResponse $response Response instance
+	 */
+	public function handle_push($target_post_id, $post_data, $response)
+	{
+SyncDebug::log(__METHOD__ . "({$target_post_id})");
+
+		$content = get_post($target_post_id)->post_content;
+		$this->_post_data = $post_data;
+
+		// replace taxonomy ids
+		$content = preg_replace_callback('/include_categories="(?P<ids>\w+[^"]*)"/i', array($this, '_process_taxonomies_callback'), $content);
+
+		wp_update_post( array('post_id' => $target_post_id, 'post_content' => $content));
+	}
+
+	/**
+	 * Process Taxonomies
+	 *
+	 * @since 1.0.0
+	 * @param $match
+	 * @return int
+	 */
+	private function _process_taxonomies_callback($matches)
+	{
+
+		$ids = explode(',', $matches['ids']);
+
+		foreach ($ids as $key => $cat_id) {
+SyncDebug::log(__METHOD__ . '() found category: ' . var_export($cat_id, TRUE));
+			foreach ($this->_post_data['divi-categories']['hierarchical'] as $index => $cat) {
+				if ($cat_id === $cat['term_id']) {
+					$name = $this->_post_data['divi-categories']['hierarchical'][$index]['name'];
+SyncDebug::log(__METHOD__ . '() term name: ' . var_export($name, TRUE));
+					$term_index = $index;
+				}
+			}
+			$term = get_term_by('name', $name, 'category');
+
+			// add new term if it doesn't exist
+			if (FALSE === $term) {
+				$term_id = SyncApiController::get_instance()->process_hierarchical_term($this->_post_data['divi-categories']['hierarchical'][$term_index], $this->_post_data['divi-categories']['hierarchical']);
+			} else {
+				$term_id = $term->term_id;
+			}
+
+			if (0 !== $term_id) {
+SyncDebug::log(__METHOD__ . '() new term id: ' . var_export($term_id, TRUE));
+				$ids[$key] = $term_id;
+			} else {
+				unset($ids[$key]);
+			}
+
+		}
+
+		$ids = implode(',', $ids);
+
+		return str_replace($matches['ids'], $ids, $matches[0]);
 	}
 }
 
