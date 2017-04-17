@@ -17,7 +17,7 @@ function WPSiteSyncContent_Divi()
 /**
  * Initialize the Sync Divi Settings UI behaviors
  */
-WPSiteSyncContent_Divi.prototype.init = function ()
+WPSiteSyncContent_Divi.prototype.init = function()
 {
 	this.inited = true;
 	this.page = this.get_param('page');
@@ -25,36 +25,34 @@ WPSiteSyncContent_Divi.prototype.init = function ()
 	var _self = this,
 		target = document.querySelector('#et_pb_main_container'),
 		config = {attributes: false, childList: true, characterData: false, subtree: true},
-		observer = new MutationObserver(function (mutations)
-		{
-			mutations.forEach(function (mutation)
-			{
+		observer = new MutationObserver(function (mutations) {
+			mutations.forEach(function(mutation) {
 				_self.on_content_change();
 				observer.disconnect();
 			});
 		});
 
-	setTimeout(function ()
-	{
+	setTimeout(function () {
 		observer.observe(target, config);
 	}, 5000);
 
 	switch (this.page) {
-		case 'et_divi_options':
-			this.show_theme_ui();
-			break;
-		case 'et_divi_role_editor':
-			this.show_role_editor_ui();
-			break;
+	case 'et_divi_options':
+		this.show_theme_ui();
+		break;
+	case 'et_divi_role_editor':
+		this.show_role_editor_ui();
+		break;
 	}
-}
+};
 
 /**
  * Get the value of a parameter from the URL
  * @param {string} name Name of the parameter to retrieve
  * @returns {String} The value of the parameter (can be empty) or null if not found
  */
-WPSiteSyncContent_Divi.prototype.get_param = function (name)
+// TODO: this looks like something that other add-ons could use. If not already in the WPSiteSyncContent class, move it there
+WPSiteSyncContent_Divi.prototype.get_param = function(name)
 {
 	var url = window.location.href;
 	name = name.replace(/[\[\]]/g, "\\$&");
@@ -64,13 +62,13 @@ WPSiteSyncContent_Divi.prototype.get_param = function (name)
 		return null;
 	if (!results[2])
 		return '';
-	return decodeURIComponent(results[2].replace(/\+/g, " "));
+	return decodeURIComponent(results[2].replace(/\+/g, ' '));
 };
 
 /**
  * Disables Sync Button every time the content changes.
  */
-WPSiteSyncContent_Divi.prototype.on_content_change = function ()
+WPSiteSyncContent_Divi.prototype.on_content_change = function()
 {
 	this.disable = true;
 	jQuery('#sync-content').attr('disabled', true);
@@ -82,7 +80,7 @@ WPSiteSyncContent_Divi.prototype.on_content_change = function ()
 /**
  * Shows the Sync UI area within the Divi Role Editor page
  */
-WPSiteSyncContent_Divi.prototype.show_role_editor_ui = function ()
+WPSiteSyncContent_Divi.prototype.show_role_editor_ui = function()
 {
 	jQuery('#et_pb_save_roles').after(jQuery('#sync-divi-ui-container').html());
 };
@@ -90,7 +88,7 @@ WPSiteSyncContent_Divi.prototype.show_role_editor_ui = function ()
 /**
  * Shows the Sync UI area within the Divi Theme Options page
  */
-WPSiteSyncContent_Divi.prototype.show_theme_ui = function ()
+WPSiteSyncContent_Divi.prototype.show_theme_ui = function()
 {
 	jQuery('#epanel-save-top').after(jQuery('#sync-divi-ui-container').html());
 };
@@ -98,7 +96,7 @@ WPSiteSyncContent_Divi.prototype.show_theme_ui = function ()
 /**
  * Callback for when the Push to Target button is clicked
  */
-WPSiteSyncContent_Divi.prototype.push_handler = function ()
+WPSiteSyncContent_Divi.prototype.push_handler = function()
 {
 	if (false === this.page)
 		return;
@@ -108,7 +106,7 @@ WPSiteSyncContent_Divi.prototype.push_handler = function ()
 /**
  * Callback for when the Pull from Target button is clicked
  */
-WPSiteSyncContent_Divi.prototype.pull_handler = function ()
+WPSiteSyncContent_Divi.prototype.pull_handler = function()
 {
 	if (false === this.page)
 		return;
@@ -118,7 +116,7 @@ WPSiteSyncContent_Divi.prototype.pull_handler = function ()
 /**
  * Callback for the Pull from Target button is clicked and the Pull add-on is not active
  */
-WPSiteSyncContent_Divi.prototype.pull_notice = function ()
+WPSiteSyncContent_Divi.prototype.pull_notice = function()
 {
 	this.hide_msgs();
 	this.set_message('pull-notice');
@@ -127,42 +125,42 @@ WPSiteSyncContent_Divi.prototype.pull_notice = function ()
 /**
  * Push Divi settings from target site
  */
-WPSiteSyncContent_Divi.prototype.push_divi = function ()
+WPSiteSyncContent_Divi.prototype.push_divi = function()
 {
 	var operation;
 
 	switch (this.page) {
-		case 'et_divi_options':
-			operation = 'pushdivisettings';
-			break;
-		case 'et_divi_role_editor':
-			operation = 'pushdiviroles';
-			break;
+	case 'et_divi_options':
+		operation = 'pushdivisettings';
+		break;
+	case 'et_divi_role_editor':
+		operation = 'pushdiviroles';
+		break;
 	}
 
 	wpsitesynccontent.inited = true;
 	wpsitesynccontent.api(operation, null, jQuery('#sync-divi-settings').text(), jQuery('#sync-divi-success-msg').text());
-}
+};
 
 /**
  * Pulls Divi settings from target site
  */
-WPSiteSyncContent_Divi.prototype.pull_divi = function ()
+WPSiteSyncContent_Divi.prototype.pull_divi = function()
 {
 	var operation;
 
 	switch (this.page) {
-		case 'et_divi_options':
-			operation = 'pulldivisettings';
-			break;
-		case 'et_divi_role_editor':
-			operation = 'pulldiviroles';
-			break;
+	case 'et_divi_options':
+		operation = 'pulldivisettings';
+		break;
+	case 'et_divi_role_editor':
+		operation = 'pulldiviroles';
+		break;
 	}
 
 	wpsitesynccontent.inited = true;
 	wpsitesynccontent.api(operation, null, jQuery('#sync-divi-settings').text(), jQuery('#sync-divi-success-msg').text());
-}
+};
 
 wpsitesynccontent.divi = new WPSiteSyncContent_Divi();
 
