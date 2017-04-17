@@ -44,7 +44,6 @@ class SyncDiviAdmin
 		wp_register_style('sync-divi', WPSiteSync_Divi::get_asset('css/sync-divi.css'), array('sync-admin'), WPSiteSync_Divi::PLUGIN_VERSION);
 
 		if (in_array($hook, array('toplevel_page_et_divi_options', 'divi_page_et_divi_role_editor', 'post.php'))) {
-
 			$theme = wp_get_theme();
 			if ('toplevel_page_et_divi_options' === $hook && ('Divi' !== $theme->name && 'Divi' !== $theme->parent_theme)) {
 				return;
@@ -65,6 +64,7 @@ class SyncDiviAdmin
 	{
 		$page = isset($_GET['page']) ? $_GET['page'] : '';
 		if (in_array($page, array('et_divi_role_editor', 'et_divi_options'))) {
+			// TODO: wrap translatable strings in __() or _e(), etc. functions as necessary
 			?>
 			<div id="sync-divi-ui-container" style="display:none">
 				<div id="sync-divi-ui">
@@ -79,7 +79,7 @@ class SyncDiviAdmin
 							<div id="sync-message-container" style="display:none">
 								<span id="sync-content-anim" style="display:none"><img src="<?php echo esc_url(WPSiteSyncContent::get_asset('imgs/ajax-loader.gif')); ?>"/></span>
 								<span id="sync-message"></span>
-								<span id="sync-message-dismiss" style="display:none"><span class="dashicons dashicons-dismiss" onclick="wpsitesynccontent.clear_message(); return false"></span></span>
+								<span id="sync-message-dismiss" style="display:none"><span class="dashicons dashicons-dismiss" onclick="wpsitesynccontent.clear_message(); return false;"></span></span>
 							</div>
 							<button class="sync-divi-push button button-primary sync-button" type="button" onclick="wpsitesynccontent.divi.push_handler(); return false;"
 								title="<?php esc_html_e('Push Divi Settings to the Target site', 'wpsitesync-divi'); ?>">
@@ -136,25 +136,21 @@ SyncDebug::log(__METHOD__ . '() operation="' . $operation . '"');
 
 		if ('pushdivisettings' === $operation) {
 SyncDebug::log(' - post=' . var_export($_POST, TRUE));
-
 			$ajax = WPSiteSync_Divi::get_instance()->load_class('diviajaxrequest', TRUE);
 			$ajax->push_divi_settings($resp);
 			$found = TRUE;
 		} else if ('pushdiviroles' === $operation) {
 SyncDebug::log(' - post=' . var_export($_POST, TRUE));
-
 			$ajax = WPSiteSync_Divi::get_instance()->load_class('diviajaxrequest', TRUE);
 			$ajax->push_divi_roles($resp);
 			$found = TRUE;
 		} else if ('pulldivisettings' === $operation) {
 SyncDebug::log(' - post=' . var_export($_POST, TRUE));
-
 			$ajax = WPSiteSync_Divi::get_instance()->load_class('diviajaxrequest', TRUE);
 			$ajax->pull_divi_settings($resp);
 			$found = TRUE;
 		} else if ('pulldiviroles' === $operation) {
 SyncDebug::log(' - post=' . var_export($_POST, TRUE));
-
 			$ajax = WPSiteSync_Divi::get_instance()->load_class('diviajaxrequest', TRUE);
 			$ajax->pull_divi_roles($resp);
 			$found = TRUE;

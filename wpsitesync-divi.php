@@ -2,7 +2,7 @@
 /*
 Plugin Name: WPSiteSync for Divi
 Plugin URI: http://wpsitesync.com
-Description: Extension for WPSiteSync for Content that provides the ability to Sync Divi theme and Divi Builder plugin content and settings within the WordPress admin.
+Description: Extension for WPSiteSync for Content that provides the ability to Sync Content created with the Divi theme and Divi Builder plugin and settings within the WordPress admin.
 Author: WPSiteSync
 Author URI: http://wpsitesync.com
 Version: 1.0
@@ -12,7 +12,7 @@ The PHP code portions are distributed under the GPL license. If not otherwise st
 images, manuals, cascading stylesheets and included JavaScript are NOT GPL.
 */
 
-if (!class_exists('WPSiteSync_Divi')) {
+if (!class_exists('WPSiteSync_Divi', FALSE)) {
 	/*
 	 * @package WPSiteSync_Divi
 	 * @author WPSiteSync
@@ -26,9 +26,9 @@ if (!class_exists('WPSiteSync_Divi')) {
 
 		const PLUGIN_NAME = 'WPSiteSync for Divi';
 		const PLUGIN_VERSION = '1.0';
-		const PLUGIN_KEY = 'c51144fe92984ecb07d30e447c39c27a';
+		const PLUGIN_KEY = 'bde626bb9c6a817dfd724451f3c3acba';
 		// TODO: this needs to be updated to 1.3.3 before releasing
-		const REQUIRED_VERSION = '1.3.2';                                    // minimum version of WPSiteSync required for this add-on to initialize
+		const REQUIRED_VERSION = '1.3.2';					// minimum version of WPSiteSync required for this add-on to initialize
 
 		private function __construct()
 		{
@@ -170,6 +170,7 @@ if (!class_exists('WPSiteSync_Divi')) {
 		 */
 		public function filter_allowed_mime_type($default, $img_type)
 		{
+			// TODO: this may not be needed with v 1.3.2. Check the filter in WPSiteSync, I think it's already defaulting to get_allowed_mime_types()
 			if (in_array($img_type['type'], get_allowed_mime_types())) {
 				return TRUE;
 			}
@@ -251,6 +252,7 @@ if (!class_exists('WPSiteSync_Divi')) {
 		 */
 		public function filter_notice_code($message, $code)
 		{
+			// TODO: this is a no-op so let's comment out the add_filter() call until such time as it's used
 			$this->_get_api_request();
 			switch ($code) {
 			case SyncDiviApiRequest::NOTICE_DIVI:
