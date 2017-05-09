@@ -64,7 +64,6 @@ class SyncDiviAdmin
 	{
 		$page = isset($_GET['page']) ? $_GET['page'] : '';
 		if (in_array($page, array('et_divi_role_editor', 'et_divi_options'))) {
-			// TODO: wrap translatable strings in __() or _e(), etc. functions as necessary
 			?>
 			<div id="sync-divi-ui-container" style="display:none">
 				<div id="sync-divi-ui">
@@ -73,9 +72,8 @@ class SyncDiviAdmin
 					</div>
 					<div id="spectrom_sync" class="sync-divi-contents">
 						<?php if (SyncOptions::is_auth()) { ?>
-							<p><em>WPSiteSync&#8482; for Divi</em> provides a convenient way to sync your
-								Divi Settings between two WordPress sites.</p>
-							<p>Target site: <b><?php echo esc_url(SyncOptions::get('target')); ?>:</b></p>
+							<?php esc_html_e('<p><em>WPSiteSync&#8482; for Divi</em> provides a convenient way to sync your Divi Settings between two WordPress sites.</p>', 'wpsitesync-divi'); ?>
+							<p><?php esc_html_e('Target site', 'wpsitesync-divi'); ?>: <b><?php echo esc_url(SyncOptions::get('target')); ?>:</b></p>
 							<div id="sync-message-container" style="display:none">
 								<span id="sync-content-anim" style="display:none"><img src="<?php echo esc_url(WPSiteSyncContent::get_asset('imgs/ajax-loader.gif')); ?>"/></span>
 								<span id="sync-message"></span>
@@ -105,9 +103,8 @@ class SyncDiviAdmin
 								<span id="sync-divi-pull-notice"><?php esc_html_e('Please install the WPSiteSync for Pull plugin to use the Pull features.', 'wpsitesync-divi'); ?></span>
 							</div>
 						<?php } else { // is_auth() ?>
-							<p>WPSiteSync&#8482; for Content is not configured with a valid Target. Please go to the
-								<a href="<?php echo esc_url(admin_url('options-general.php?page=sync')); ?>">Settings
-									Page</a> to configure.</p>
+							<p><?php echo sprintf(__('WPSiteSync&#8482; for Content is not configured with a valid Target. Please go to the
+								<a href="%s">Settings Page</a> to configure.', 'wpsitesync-divi'), esc_url(admin_url('options-general.php?page=sync'))); ?></p>
 						<?php } ?>
 					</div>
 				</div>
@@ -129,10 +126,9 @@ class SyncDiviAdmin
 	{
 SyncDebug::log(__METHOD__ . '() operation="' . $operation . '"');
 
-	// @todo enable
-//		$license = WPSiteSyncContent::get_instance()->get_license();
-//		if (!$license)
-//			return $found;
+		$license = WPSiteSyncContent::get_instance()->get_license();
+		if (!$license)
+			return $found;
 
 		if ('pushdivisettings' === $operation) {
 SyncDebug::log(' - post=' . var_export($_POST, TRUE));

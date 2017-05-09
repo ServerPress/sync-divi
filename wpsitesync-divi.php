@@ -61,8 +61,8 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		{
 			add_filter('spectrom_sync_active_extensions', array($this, 'filter_active_extensions'), 10, 2);
 
-//			if (!WPSiteSyncContent::get_instance()->get_license()->check_license('sync_divi', self::PLUGIN_KEY, self::PLUGIN_NAME))
-//				return;
+			if (!WPSiteSyncContent::get_instance()->get_license()->check_license('sync_divi', self::PLUGIN_KEY, self::PLUGIN_NAME))
+				return;
 
 			// check for minimum WPSiteSync version
 			if (is_admin() && version_compare(WPSiteSyncContent::PLUGIN_VERSION, self::REQUIRED_VERSION) < 0 && current_user_can('activate_plugins')) {
@@ -86,7 +86,7 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 			add_action('spectrom_sync_api_request_response', array($this, 'api_response'), 10, 3); // called by SyncApiRequest->api()
 
 			add_filter('spectrom_sync_error_code_to_text', array($this, 'filter_error_codes'), 10, 2);
-			add_filter('spectrom_sync_notice_code_to_text', array($this, 'filter_notice_codes'), 10, 2);
+			//add_filter('spectrom_sync_notice_code_to_text', array($this, 'filter_notice_codes'), 10, 2);
 		}
 
 		/**
@@ -170,7 +170,7 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		 */
 		public function filter_allowed_mime_type($default, $img_type)
 		{
-			// TODO: this may not be needed with v 1.3.2. Check the filter in WPSiteSync, I think it's already defaulting to get_allowed_mime_types()
+			// TODO: Will not be needed once WPSiteSync changed to default to get_allowed_mime_types()
 			if (in_array($img_type['type'], get_allowed_mime_types())) {
 				return TRUE;
 			}
@@ -252,7 +252,6 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		 */
 		public function filter_notice_code($message, $code)
 		{
-			// TODO: this is a no-op so let's comment out the add_filter() call until such time as it's used
 			$this->_get_api_request();
 			switch ($code) {
 			case SyncDiviApiRequest::NOTICE_DIVI:

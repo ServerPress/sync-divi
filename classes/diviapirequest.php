@@ -28,26 +28,20 @@ class SyncDiviApiRequest extends SyncInput
 	{
 SyncDebug::log(__METHOD__ . '() action=' . $action);
 
-// @todo enable licensing
-		//&& $license->check_license('sync_divi', WPSiteSync_Divi::PLUGIN_KEY, WPSiteSync_Divi::PLUGIN_NAME)
-//		$license = WPSiteSyncContent::get_instance()->get_license();
-//		if (!$license)
-//			return $args;
+		if (!$license->check_license('sync_divi', WPSiteSync_Divi::PLUGIN_KEY, WPSiteSync_Divi::PLUGIN_NAME))
+			return $args;
 
 		if ('pushdivisettings' === $action) {
 SyncDebug::log(__METHOD__ . '() args=' . var_export($args, TRUE));
-			$push_data = array();
-			$tax_data = array();
 
+			$settings['divi-settings'] = get_option('et_divi');
+			$api = WPSiteSync_Divi::get_instance()->get_api();
+			$api->set_source_domain(site_url());
+			$push_data = $this->_get_taxonomies($settings);
 			$push_data['pull'] = FALSE;
 			$push_data['site-key'] = $args['auth']['site_key'];
 			$push_data['source_domain'] = site_url();
-			$push_data['divi-settings'] = get_option('et_divi');
-			$api = WPSiteSync_Divi::get_instance()->get_api();
-			$api->set_source_domain(site_url());
 
-			// TODO: use a different variable name? Looks like $push_data is already set and you're overwriting it. Intent is not clear
-			$push_data = $this->_get_taxonomies($push_data, $tax_data);
 			$this->_get_media($push_data, $api);
 
 SyncDebug::log(__METHOD__ . '() push_data=' . var_export($push_data, TRUE));
@@ -70,23 +64,21 @@ SyncDebug::log(__METHOD__ . '() push_data=' . var_export($push_data, TRUE));
 	/**
 	 * Handles the Push requests being processed on the Target from SyncApiController
 	 *
-	 // TODO: document parameters
-	 * @param type $return
-	 * @param type $action
-	 * @param SyncApiResponse $response
-	 * @return bool $response
+	 * @param bool $return The API request return value
+	 * @param string $action The API action being performed
+	 * @param SyncApiResponse $response The API response
+	 * @return bool $response The API response
 	 */
 	public function api_controller_request($return, $action, SyncApiResponse $response)
 	{
 SyncDebug::log(__METHOD__ . "() handling '{$action}' action");
 
-// @todo enable licensing
-//		$license = WPSiteSyncContent::get_instance()->get_license();
-//		if (!$license)
-//			return $return;
+		$license = WPSiteSyncContent::get_instance()->get_license();
+		if (!$license)
+			return $return;
 
-		// TODO: change all the if () else if () ... to a switch since there are several of them
-		if ('pushdivisettings' === $action) {
+		switch($action){
+		case 'pushdivisettings':
 			$this->_push_data = $this->post_raw('push_data', array());
 SyncDebug::log(__METHOD__ . '() found push_data information: ' . var_export($this->_push_data, TRUE));
 
@@ -96,7 +88,7 @@ SyncDebug::log(__METHOD__ . '() source domain: ' . var_export($this->_push_data[
 
 			if (empty($this->_push_data['divi-settings'])) {
 				$response->error_code(SyncDiviApiRequest::ERROR_DIVI_SETTINGS_NOT_FOUND);
-				return TRUE;			// return, signaling that the API request was processed
+				return TRUE;            // return, signaling that the API request was processed
 			}
 
 			foreach ($this->_push_data['divi-settings'] as $setting_key => $settings) {
@@ -164,27 +156,26 @@ SyncDebug::log(__METHOD__ . '() new term id: ' . var_export($term_id, TRUE));
 			update_option('et_divi', $this->_push_data['divi-settings']);
 
 			$return = TRUE; // tell the SyncApiController that the request was handled
-		} else if ('pushdiviroles' === $action) {
+			break;
+		case 'pushdiviroles':
 			$this->_push_data = $this->post_raw('push_data', array());
 SyncDebug::log(__METHOD__ . '() found push_data information: ' . var_export($this->_push_data, TRUE));
 
 			if (empty($this->_push_data['divi-roles'])) {
 				$response->error_code(SyncDiviApiRequest::ERROR_DIVI_ROLES_NOT_FOUND);
-				return TRUE;			// return, signaling that the API request was processed
+				return TRUE;            // return, signaling that the API request was processed
 			}
 
 			update_option('et_pb_role_settings', $this->_push_data['divi-roles']);
 
 			$return = TRUE; // tell the SyncApiController that the request was handled
-		} else if ('pulldivisettings' === $action) {
-			$pull_data = array();
-			$tax_data = array();
-			$pull_data['divi-settings'] = get_option('et_divi');
+			break;
+		case 'pulldivisettings':
+			$settings['divi-settings'] = get_option('et_divi');
 			$api = WPSiteSync_Divi::get_instance()->get_api();
 			$api->set_source_domain(site_url());
 
-			// TODO: use a different variable name? Looks like $pull_data is already set and you're overwriting it. Intent is not clear
-			$pull_data = $this->_get_taxonomies($pull_data, $tax_data);
+			$pull_data = $this->_get_taxonomies($settings);
 			$this->_get_media($pull_data, $api);
 
 			$response->set('pull_data', $pull_data); // add all the post information to the ApiResponse object
@@ -192,7 +183,8 @@ SyncDebug::log(__METHOD__ . '() found push_data information: ' . var_export($thi
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - response data=' . var_export($response, TRUE));
 
 			$return = TRUE; // tell the SyncApiController that the request was handled
-		} else if ('pulldiviroles' === $action) {
+			break;
+		case 'pulldiviroles':
 			$pull_data = array();
 			$pull_data['divi-roles'] = get_option('et_pb_role_settings');
 
@@ -201,6 +193,7 @@ SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - response data=' . var_export(
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - response data=' . var_export($response, TRUE));
 
 			$return = TRUE; // tell the SyncApiController that the request was handled
+			break;
 		}
 
 		return $return;
@@ -376,10 +369,13 @@ SyncDebug::log(__METHOD__ . "({$target_post_id}, {$attach_id}, {$media_id}):" . 
 		if (1 === $gallery) {
 SyncDebug::log(__METHOD__ . ' processing gallery');
 			$old_attach_id = $this->post_int('attach_id', 0);
-			// TODO: perform validity checking on results of get_post() before using properties. Post can be deleted
-			$content = get_post($target_post_id)->post_content;
-			$content = preg_replace("/(gallery_ids=.*){$old_attach_id}(.*\")/", "\${1}{$media_id}\${2}", $content);
-			wp_update_post(array('post_id' => $target_post_id, 'post_content' => $content));
+			$post = get_post($target_post_id);
+			if ($post) {
+				$content = $post->post_content;
+				$content = preg_replace("/(gallery_ids=.*){$old_attach_id}(.*\")/", "\${1}{$media_id}\${2}", $content);
+				wp_update_post(array('post_id' => $target_post_id, 'post_content' => $content));
+			}
+
 			return;
 		}
 	}
@@ -457,8 +453,7 @@ SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($id, TRUE)
 		}
 
 		// add media to queue
-		// TODO: is this handling the unlimited # with suffixes? If so, remove the @todo note
-		// @todo 'bg_img_1' - can have unlimited # with suffix # increasing
+		// TODO: modify regex to allow unlimited backgrounds 'bg_img_1' - can have unlimited # with suffix # increasing
 		if (preg_match_all('/(src|mp4|webm|audio|image_url|image|url)="(?P<src>\w+[^"]*)"/i', $content, $matches)) {
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' matches=' . var_export($matches, TRUE));
 			foreach (array_unique($matches['src']) as $src) {
@@ -473,8 +468,9 @@ SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($src, TRUE
 			}
 		}
 
-		// TODO: /never/ put an if and it's statement on the same line
-		if (! empty($push_tax_data)) $data['post_data']['divi-categories'] = $push_tax_data;
+		if (! empty($push_tax_data)) {
+			$data['post_data']['divi-categories'] = $push_tax_data;
+		}
 
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' filtered push data=' . var_export($data, TRUE));
 
@@ -491,14 +487,16 @@ SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' filtered push data=' . var_expo
 	{
 SyncDebug::log(__METHOD__ . "({$target_post_id})");
 
-		// TODO: perform validity checking on results of get_post() before using properties. User could delete Target post and then Push from Source
-		$content = get_post($target_post_id)->post_content;
-		$this->_post_data = $post_data;
+		$post = get_post($target_post_id);
+		if ($post) {
+			$content = $post->post_content;
+			$this->_post_data = $post_data;
 
-		// replace taxonomy ids
-		$content = preg_replace_callback('/include_categories="(?P<ids>\w+[^"]*)"/i', array($this, '_process_taxonomies_callback'), $content);
+			// replace taxonomy ids
+			$content = preg_replace_callback('/include_categories="(?P<ids>\w+[^"]*)"/i', array($this, '_process_taxonomies_callback'), $content);
 
-		wp_update_post(array('post_id' => $target_post_id, 'post_content' => $content));
+			wp_update_post(array('post_id' => $target_post_id, 'post_content' => $content));
+		}
 	}
 
 	/**
@@ -545,19 +543,17 @@ SyncDebug::log(__METHOD__ . '() new term id: ' . var_export($term_id, TRUE));
 	}
 
 	/**
-	 // TODO: get taxonomies for what? please expand on what this is intended to do
-	 * Get Taxonomies
+	 * Get Taxonomies that are referenced on the source site in Divi's theme settings
 	 *
 	 * @since 1.0.0
-	 // TODO: document parameters
-	 * @param $push_data
-	 * @param $tax_data
-	 * @return mixed
+	 * @param array $settings Contains Divi theme settings
+	 * @return array $settings Modified settings
 	 */
-	private function _get_taxonomies($push_data, $tax_data)
+	private function _get_taxonomies($settings)
 	{
-		if (array_key_exists('divi_menucats', $push_data['divi-settings'])) {
-			$categories = $push_data['divi-settings']['divi_menucats'];
+		$tax_data = array();
+		if (array_key_exists('divi_menucats', $settings['divi-settings'])) {
+			$categories = $settings['divi-settings']['divi_menucats'];
 			foreach ($categories as $category) {
 				$term_data = get_term($category, 'category');
 				$tax_name = $term_data->taxonomy;
@@ -569,19 +565,17 @@ SyncDebug::log(__METHOD__ . '() new term id: ' . var_export($term_id, TRUE));
 					$parent = $term->parent;
 				}
 			}
-			$push_data['divi-categories'] = $tax_data;
+			$settings['divi-categories'] = $tax_data;
 		}
-		return $push_data;
+		return $settings;
 	}
 
 	/**
-	 // TODO: get media for what? please expand on what this is intended to do
-	 * Get Media
+	 * Get Media from Source site that is refereneced in Divi Theme Settings
 	 *
 	 * @since 1.0.0
-	 // TODO: document parameters
-	 * @param $push_data
-	 * @param $api
+	 * @param array $push_data Previously set push_data
+	 * @param object $api SyncApiRequest
 	 */
 	private function _get_media($push_data, $api)
 	{
