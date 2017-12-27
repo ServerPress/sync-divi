@@ -39,10 +39,7 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 
 		/**
 		 * Retrieve singleton class instance
-		 *
-		 * @since 1.0.0
-		 * @static
-		 * @return null|WPSiteSync_Divi
+		 * @return object WPSiteSync_Divi instance
 		 */
 		public static function get_instance()
 		{
@@ -53,16 +50,14 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 
 		/**
 		 * Callback for Sync initialization action
-		 *
-		 * @since 1.0.0
-		 * @return void
 		 */
 		public function init()
 		{
 			add_filter('spectrom_sync_active_extensions', array($this, 'filter_active_extensions'), 10, 2);
 
-			if (!WPSiteSyncContent::get_instance()->get_license()->check_license('sync_divi', self::PLUGIN_KEY, self::PLUGIN_NAME))
-				return;
+			// TODO: enable licensing before shipping
+###			if (!WPSiteSyncContent::get_instance()->get_license()->check_license('sync_divi', self::PLUGIN_KEY, self::PLUGIN_NAME))
+###				return;
 
 			// check for minimum WPSiteSync version
 			if (is_admin() && version_compare(WPSiteSyncContent::PLUGIN_VERSION, self::REQUIRED_VERSION) < 0 && current_user_can('activate_plugins')) {
@@ -86,12 +81,11 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 			add_action('spectrom_sync_api_request_response', array($this, 'api_response'), 10, 3); // called by SyncApiRequest->api()
 
 			add_filter('spectrom_sync_error_code_to_text', array($this, 'filter_error_codes'), 10, 2);
-			//add_filter('spectrom_sync_notice_code_to_text', array($this, 'filter_notice_codes'), 10, 2);
+			add_filter('spectrom_sync_notice_code_to_text', array($this, 'filter_notice_codes'), 10, 2);
 		}
 
 		/**
 		 * Checks the API request if the action is to pull/push the settings
-		 *
 		 * @param array $args The arguments array sent to SyncApiRequest::api()
 		 * @param string $action The API requested
 		 * @param array $remote_args Array of arguments sent to SyncApiRequest::api()
@@ -106,12 +100,11 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		}
 
 		/**
-		 * Handles the requests being processed on the Target from SyncApiController
-		 *
-		 * @param type $return
-		 * @param type $action
-		 * @param SyncApiResponse $response
-		 * @return bool $response
+		 * Filter for 'spectrom_sync_api'. Handles the requests being processed on the Target from SyncApiController
+		 * @param boolean $return Set to TRUE when action has been handled
+		 * @param string $action Name of API action to process
+		 * @param SyncApiResponse $response The response to send back to the caller of the API
+		 * @return bool $response Set to TRUE when API request has been handled
 		 */
 		public function api_controller_request($return, $action, SyncApiResponse $response)
 		{
@@ -122,8 +115,7 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		}
 
 		/**
-		 * Handles the request on the Source after API Requests are made and the response is ready to be interpreted
-		 *
+		 * Callback for 'spectrom_sync_api_request_response' action. Handles the request on the Source after API Requests are made and the response is ready to be interpreted
 		 * @param string $action The API name, i.e. 'push' or 'pull'
 		 * @param array $remote_args The arguments sent to SyncApiRequest::api()
 		 * @param SyncApiResponse $response The response object after the API request has been made
@@ -161,16 +153,14 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		}
 
 		/**
-		 * Filter the allowed mime type in upload_media
-		 *
-		 * @since 1.0.0
+		 * Callback for the 'spectrom_sync_upload_media_allowed_mime_type' filter the allowed mime type in upload_media
 		 * @param $default
 		 * @param $img_type
 		 * @return string
 		 */
 		public function filter_allowed_mime_type($default, $img_type)
 		{
-			// TODO: Will not be needed once WPSiteSync changed to default to get_allowed_mime_types()
+			// TODO: this may not be needed with v 1.3.2. Check the filter in WPSiteSync, I think it's already defaulting to get_allowed_mime_types()
 			if (in_array($img_type['type'], get_allowed_mime_types())) {
 				return TRUE;
 			}
@@ -232,6 +222,7 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		 */
 		public function filter_error_code($message, $code)
 		{
+			// load the SyncDiviApiRequest class so we can get notice codes
 			$this->_get_api_request();
 			switch ($code) {
 			case SyncDiviApiRequest::ERROR_DIVI_SETTINGS_NOT_FOUND:
@@ -252,6 +243,7 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		 */
 		public function filter_notice_code($message, $code)
 		{
+			// load the SyncDiviApiRequest class so we can get notice codes
 			$this->_get_api_request();
 			switch ($code) {
 			case SyncDiviApiRequest::NOTICE_DIVI:
@@ -288,8 +280,6 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 
 		/**
 		 * Loads a specified class file name and optionally creates an instance of it
-		 *
-		 * @since 1.0.0
 		 * @param $name Name of class to load
 		 * @param bool $create TRUE to create an instance of the loaded class
 		 * @return bool|object Created instance of $create is TRUE; otherwise FALSE
@@ -308,10 +298,7 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 
 		/**
 		 * Return reference to asset, relative to the base plugin's /assets/ directory
-		 *
-		 * @since 1.0.0
 		 * @param string $ref asset name to reference
-		 * @static
 		 * @return string href to fully qualified location of referenced asset
 		 */
 		public static function get_asset($ref)
@@ -338,7 +325,7 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		public function notice_requires_wpss()
 		{
 			$this->_show_notice(sprintf(__('WPSiteSync for Divi requires the main <em>WPSiteSync for Content</em> plugin to be installed and activated. Please <a href="%1$s">click here</a> to install or <a href="%2$s">click here</a> to activate.', 'wpsitesync-divi'),
-				admin_url('plugin-install.php?tab=search&s=wpsitesync'),
+				admin_url('plugin-install.php?tab=search&s=wpsitesynccontent'),
 				admin_url('plugins.php')), 'notice-warning');
 		}
 
@@ -368,7 +355,6 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 
 		/**
 		 * Adds the WPSiteSync for Divi add-on to the list of known WPSiteSync extensions
-		 *
 		 * @param array $extensions The list of extensions
 		 * @param boolean TRUE to force adding the extension; otherwise FALSE
 		 * @return array Modified list of extensions

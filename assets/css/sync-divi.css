@@ -1,3 +1,14 @@
+.et_pb_save_settings_button_wrapper #sync-divi-ui {
+	margin-left: .9rem;
+}
+
+#spectrom_sync .sync-button {
+	text-transform: none;
+	font-weight: normal;
+	font-size: 12px;
+	margin-top: 1rem;
+}
+
 #sync-divi-ui {
 	border: 1px solid #4accf6;
 	background: #FFFFFF;
@@ -13,4 +24,11 @@
 
 #sync-divi-ui + .et_pb_roles_title, #main_options_form {
 	clear: both;
+}
+#et_dashboard_wrapper_outer {
+	padding-top: 1rem;
+}
+h3.et_pb_settings_title {
+	position: relative !important;
+	top: 90px !important;
 }

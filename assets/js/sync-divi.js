@@ -1,14 +1,44 @@
 /*
- * @copyright Copyright (C) 2015 SpectrOMtech.com. - All Rights Reserved.
+ * @copyright Copyright (C) 2015-2017 WPSiteSync.com. - All Rights Reserved.
  * @license GNU General Public License, version 2 (http://www.gnu.org/licenses/gpl-2.0.html)
- * @author SpectrOMtech.com <hello@SpectrOMtech.com>
+ * @author Dave Jesch <hello@SpectrOMtech.com>
  * @url https://www.wpsitesync.com/downloads/
  * The PHP code portions are distributed under the GPL license. If not otherwise stated, all images, manuals, cascading style sheets, and included JavaScript *are NOT GPL, and are released under the SpectrOMtech Proprietary Use License v1.0
- * More info at https://SpectrOMtech.com/products/
+ * More info at https://wpsitesync.com/products/
  */
+
+/**
+ * Debug logging to the browser console
+ * @param {string} msg The message to display
+ * @param {object} val Optional object to display
+ */
+function syncdebug(msg, val)
+{
+// return
+	var fn = '';
+
+	if ('undefined' !== typeof(console.log)) {
+		if (null !== syncdebug.caller)
+			fn = syncdebug.caller.name + '() ';
+
+		if ('undefined' !== typeof(val)) {
+			switch (typeof(val)) {
+			case 'string':		msg += ' "' + val + '"';						break;
+			case 'object':		msg += ' {' + JSON.stringify(val) + '}';		break;
+			case 'number':		msg += ' #' + val;								break;
+			case 'boolean':		msg += ' `' + (val ? 'true' : 'false') + '`';	break;
+			}
+			if (null === val)
+				msg += ' `null`';
+		}
+		console.log(fn + msg);
+	}
+}
+syncdebug('sync-divi.js');
 
 function WPSiteSyncContent_Divi()
 {
+syncdebug('constructor');
 	this.inited = false;
 	this.page = false;
 	this.disable = false;
@@ -20,7 +50,8 @@ function WPSiteSyncContent_Divi()
 WPSiteSyncContent_Divi.prototype.init = function()
 {
 	this.inited = true;
-	this.page = this.get_param('page');
+	this.page = wpsitesynccontent.get_param('page'); // this.get_param('page');
+syncdebug('divi page=' + this.page);
 
 	var _self = this,
 		target = document.querySelector('#et_pb_main_container'),
@@ -32,13 +63,15 @@ WPSiteSyncContent_Divi.prototype.init = function()
 			});
 		});
 
-	setTimeout(function () {
-		observer.observe(target, config);
-	}, 5000);
+	if (null !== target) {
+		setTimeout(function () {
+			observer.observe(target, config);
+		}, 5000);
+	}
 
 	switch (this.page) {
 	case 'et_divi_options':
-		this.show_theme_ui();
+		this.show_settings_ui();
 		break;
 	case 'et_divi_role_editor':
 		this.show_role_editor_ui();
@@ -51,8 +84,8 @@ WPSiteSyncContent_Divi.prototype.init = function()
  * @param {string} name Name of the parameter to retrieve
  * @returns {String} The value of the parameter (can be empty) or null if not found
  */
-// TODO: this looks like something that other add-ons could use. If not already in the WPSiteSyncContent class, move it there
-WPSiteSyncContent_Divi.prototype.get_param = function(name)
+// TODO: remove after testing
+/*WPSiteSyncContent_Divi.prototype.get_param = function(name)
 {
 	var url = window.location.href;
 	name = name.replace(/[\[\]]/g, "\\$&");
@@ -63,7 +96,7 @@ WPSiteSyncContent_Divi.prototype.get_param = function(name)
 	if (!results[2])
 		return '';
 	return decodeURIComponent(results[2].replace(/\+/g, ' '));
-};
+};*/
 
 /**
  * Disables Sync Button every time the content changes.
@@ -88,9 +121,14 @@ WPSiteSyncContent_Divi.prototype.show_role_editor_ui = function()
 /**
  * Shows the Sync UI area within the Divi Theme Options page
  */
-WPSiteSyncContent_Divi.prototype.show_theme_ui = function()
+WPSiteSyncContent_Divi.prototype.show_settings_ui = function()
 {
-	jQuery('#epanel-save-top').after(jQuery('#sync-divi-ui-container').html());
+syncdebug(' showing setting ui');
+	var content = jQuery('#sync-divi-ui-container').html();
+	if (jQuery('#et_pb_save_plugin'))
+		jQuery('#et_pb_save_plugin').after(content);
+	else
+		jQuery('#epanel-save-top').after(content);
 };
 
 /**
@@ -158,14 +196,18 @@ WPSiteSyncContent_Divi.prototype.pull_divi = function()
 		break;
 	}
 
-	wpsitesynccontent.inited = true;
+	// TODO: removed setting .inited to true. This should be handled in wpss instantiation and not needed here. Verify
+//	wpsitesynccontent.inited = true;
 	wpsitesynccontent.api(operation, null, jQuery('#sync-divi-settings').text(), jQuery('#sync-divi-success-msg').text());
 };
 
 wpsitesynccontent.divi = new WPSiteSyncContent_Divi();
 
 // initialize the WPSiteSync operation on page load
-jQuery(document).ready(function ()
+jQuery(document).ready(function()
 {
+syncdebug('calling init()');
 	wpsitesynccontent.divi.init();
 });
+
+// EOF

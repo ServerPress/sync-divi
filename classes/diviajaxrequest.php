@@ -12,10 +12,7 @@ class SyncDiviAjaxRequest extends SyncInput
 
 	/**
 	 * Retrieve singleton class instance
-	 *
-	 * @since 1.0.0
-	 * @static
-	 * @return null|SyncDiviAdmin instance reference to plugin
+	 * @return SyncDiviAdmin instance reference to AJAX request class
 	 */
 	public static function get_instance()
 	{
@@ -26,10 +23,8 @@ class SyncDiviAjaxRequest extends SyncInput
 
 	/**
 	 * Push Divi Settings ajax request
-	 *
-	 * @since 1.0.0
 	 * @param SyncApiResponse $resp The response object after the API request has been made
-	 * @return void
+	 * @return boolean TRUE if handled the request
 	 */
 	public function push_divi_settings($resp)
 	{
@@ -40,11 +35,11 @@ SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - returned from api() call; cop
 		$resp->copy($api_response);
 
 		if (0 === $api_response->get_error_code()) {
-SyncDebug::log(' - no error, setting success');
+SyncDebug::log(__METHOD__.'():' . __LINE__ . ' no error, setting success');
 			$resp->success(TRUE);
 		} else {
 			$resp->success(FALSE);
-SyncDebug::log(' - error code: ' . $api_response->get_error_code());
+SyncDebug::log(__METHOD__.'():' . __LINE__ . ' error code: ' . $api_response->get_error_code());
 		}
 
 		return TRUE; // return, signaling that we've handled the request
@@ -52,10 +47,8 @@ SyncDebug::log(' - error code: ' . $api_response->get_error_code());
 
 	/**
 	 * Push Divi Role Editor ajax request
-	 *
-	 * @since 1.0.0
 	 * @param SyncApiResponse $resp The response object after the API request has been made
-	 * @return void
+	 * @return boolean TRUE if handled the request
 	 */
 	public function push_divi_roles($resp)
 	{
@@ -66,11 +59,11 @@ SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - returned from api() call; cop
 		$resp->copy($api_response);
 
 		if (0 === $api_response->get_error_code()) {
-SyncDebug::log(' - no error, setting success');
+SyncDebug::log(__METHOD__.'():' . __LINE__ . ' no error, setting success');
 			$resp->success(TRUE);
 		} else {
 			$resp->success(FALSE);
-SyncDebug::log(' - error code: ' . $api_response->get_error_code());
+SyncDebug::log(__METHOD__.'():' . __LINE__ . ' error code: ' . $api_response->get_error_code());
 		}
 
 		return TRUE; // return, signaling that we've handled the request
@@ -78,10 +71,8 @@ SyncDebug::log(' - error code: ' . $api_response->get_error_code());
 
 	/**
 	 * Pull Divi Settings ajax request
-	 *
-	 * @since 1.0.0
 	 * @param SyncApiResponse $resp The response object after the API request has been made
-	 * @return void
+	 * @return boolean TRUE if handled the request
 	 */
 	public function pull_divi_settings($resp)
 	{
@@ -92,11 +83,11 @@ SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - returned from api() call; cop
 		$resp->copy($api_response);
 
 		if (0 === $api_response->get_error_code()) {
-SyncDebug::log(' - no error, setting success');
+SyncDebug::log(__METHOD__.'():' . __LINE__ . ' no error, setting success');
 			$resp->success(TRUE);
 		} else {
 			$resp->success(FALSE);
-SyncDebug::log(' - error code: ' . $api_response->get_error_code());
+SyncDebug::log(__METHOD__.'():' . __LINE__ . ' error code: ' . $api_response->get_error_code());
 		}
 
 		return TRUE; // return, signaling that we've handled the request
@@ -104,10 +95,8 @@ SyncDebug::log(' - error code: ' . $api_response->get_error_code());
 
 	/**
 	 * Pull Divi Role Editor ajax request
-	 *
-	 * @since 1.0.0
 	 * @param SyncApiResponse $resp The response object after the API request has been made
-	 * @return void
+	 * @return boolean TRUE if handled the request
 	 */
 	public function pull_divi_roles($resp)
 	{
@@ -118,11 +107,11 @@ SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - returned from api() call; cop
 		$resp->copy($api_response);
 
 		if (0 === $api_response->get_error_code()) {
-SyncDebug::log(' - no error, setting success');
+SyncDebug::log(__METHOD__.'():' . __LINE__ . ' no error, setting success');
 			$resp->success(TRUE);
 		} else {
 			$resp->success(FALSE);
-SyncDebug::log(' - error code: ' . $api_response->get_error_code());
+SyncDebug::log(__METHOD__.'():' . __LINE__ . ' error code: ' . $api_response->get_error_code());
 		}
 
 		return TRUE; // return, signaling that we've handled the request
