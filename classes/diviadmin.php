@@ -79,6 +79,7 @@ class SyncDiviAdmin
 					</div>
 					<div id="spectrom_sync" class="sync-divi-contents">
 <?php					if (SyncOptions::is_auth()) { ?>
+<?php						// TODO: can use SyncAdmin->render_sync_metabox() instead? ?>
 							<p><?php _e('<em>WPSiteSync&#8482; for Divi</em> provides a convenient way to sync your Divi Settings between two WordPress sites.', 'wpsitesync-divi'); ?></p>
 							<p><?php printf(__('Target site: <b>%1$s:</b>', 'wpsitesync-divi'), esc_url(SyncOptions::get('target'))); ?></p>
 							<div id="sync-message-container" style="display:none">
@@ -121,6 +122,7 @@ class SyncDiviAdmin
 								<span id="sync-divi-failure-msg"><?php esc_html_e('Failed to Sync Divi Settings.', 'wpsitesync-divi'); ?></span>
 								<span id="sync-divi-success-msg"><?php esc_html_e('Successfully Synced Divi Settings.', 'wpsitesync-divi'); ?></span>
 								<span id="sync-divi-pull-notice"><?php esc_html_e('Please install the WPSiteSync for Pull plugin to use the Pull features.', 'wpsitesync-divi'); ?></span>
+								<span id="sync-error-msg"><?php esc_html_e('Error: error encountered during request.', 'wpsitesynccontent'); ?></span>
 							</div>
 <?php					} else { // is_auth() ?>
 							<p>
