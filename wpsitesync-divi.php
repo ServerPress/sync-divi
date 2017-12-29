@@ -220,17 +220,14 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		 * @param int $code The error code to convert
 		 * @return string Modified message if one of WPSiteSync Divi's error codes
 		 */
-		public function filter_error_code($message, $code)
+		public function filter_error_codes($message, $code)
 		{
-			// load the SyncDiviApiRequest class so we can get notice codes
+			// load the SyncDiviApiRequest class so we can get error code constants
 			$this->_get_api_request();
 			switch ($code) {
-			case SyncDiviApiRequest::ERROR_DIVI_SETTINGS_NOT_FOUND:
-				$message = __('Divi Settings were not found', 'wpsitesync-divi');
-				break;
-			case SyncDiviApiRequest::ERROR_DIVI_ROLES_NOT_FOUND:
-				$message = __('Divi Roles were not found', 'wpsitesync-divi');
-				break;
+			case SyncDiviApiRequest::ERROR_DIVI_SETTINGS_NOT_FOUND:		$message = __('Divi Settings were not found', 'wpsitesync-divi');								break;
+			case SyncDiviApiRequest::ERROR_DIVI_ROLES_NOT_FOUND:		$message = __('Divi Roles were not found', 'wpsitesync-divi');									break;
+			case SyncDiviApiRequest::ERROR_DIVI_VERSION_MISMATCH:		$message = __('Divi versions are not the same on Source and Target sites and using Strict Mode.', 'wpsitesync-divi');	break;
 			}
 			return $message;
 		}
@@ -241,14 +238,12 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		 * @param int $code The error code to convert
 		 * @return string Modified message if one of WPSiteSync Divi's error codes
 		 */
-		public function filter_notice_code($message, $code)
+		public function filter_notice_codes($message, $code)
 		{
-			// load the SyncDiviApiRequest class so we can get notice codes
+			// load the SyncDiviApiRequest class so we can get notice code constants
 			$this->_get_api_request();
 			switch ($code) {
-			case SyncDiviApiRequest::NOTICE_DIVI:
-				$message = __('', 'wpsitesync-divi');
-				break;
+			case SyncDiviApiRequest::NOTICE_NO_SETTINGS:	$message = __('No Divi Theme or Plugin settings found.', 'wpsitesync-divi');	break;
 			}
 			return $message;
 		}
