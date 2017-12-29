@@ -165,7 +165,7 @@ WPSiteSyncContent_Divi.prototype.pull_notice = function()
  */
 WPSiteSyncContent_Divi.prototype.push_divi = function()
 {
-	var operation;
+	var operation = null;
 
 	switch (this.page) {
 	case 'et_divi_options':
@@ -176,8 +176,14 @@ WPSiteSyncContent_Divi.prototype.push_divi = function()
 		break;
 	}
 
-	wpsitesynccontent.inited = true;
-	wpsitesynccontent.api(operation, null, jQuery('#sync-divi-settings').text(), jQuery('#sync-divi-success-msg').text());
+	if (null !== operation) {
+		// TODO: init() already called
+//		wpsitesynccontent.inited = true;
+		wpsitesynccontent.api(operation, null, jQuery('#sync-divi-settings').text(), jQuery('#sync-divi-success-msg').text());
+	} else {
+		// TODO: translate
+		wpsitesynccontent.set_message('Unrecognized operation', false, true);
+	}
 };
 
 /**
@@ -185,7 +191,7 @@ WPSiteSyncContent_Divi.prototype.push_divi = function()
  */
 WPSiteSyncContent_Divi.prototype.pull_divi = function()
 {
-	var operation;
+	var operation = null;
 
 	switch (this.page) {
 	case 'et_divi_options':
@@ -196,9 +202,11 @@ WPSiteSyncContent_Divi.prototype.pull_divi = function()
 		break;
 	}
 
-	// TODO: removed setting .inited to true. This should be handled in wpss instantiation and not needed here. Verify
-//	wpsitesynccontent.inited = true;
-	wpsitesynccontent.api(operation, null, jQuery('#sync-divi-settings').text(), jQuery('#sync-divi-success-msg').text());
+	if (null !== operation) {
+		// TODO: removed setting .inited to true. This should be handled in wpss instantiation and not needed here. Verify
+//		wpsitesynccontent.inited = true;
+		wpsitesynccontent.api(operation, null, jQuery('#sync-divi-settings').text(), jQuery('#sync-divi-success-msg').text());
+	}
 };
 
 wpsitesynccontent.divi = new WPSiteSyncContent_Divi();
