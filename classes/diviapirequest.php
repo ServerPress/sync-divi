@@ -2,27 +2,43 @@
 
 /*
  * Allows syncing of Divi content and settings between the Source and Target sites
+ * 
+ * The following represents the data structure used in Sync operations:
+ *  $_push_data['divi-version']				Theme / Plugin version, via get_option('et_core_version')
+ *  $_push_data['divi-settings']			Theme settings, via get_option('et_divi')
+ *  $_push_data['divi-builder-settings']	Plugin settings, via get_option('et_divi_builder_plugin')
+ *  $_push_data['divi-roles']				Role configurations, via get_option('et_pb_role_settings')
  * @package Sync
  * @author WPSiteSync
  */
 
+/**
+settings:
+  et_core_version                         | 3.0.92
+* et_divi
+* et_divi_builder_plugin                  | a:5:{s:39:"static_cs
+  et_pb_builder_options                   | a:10:{i:0;b:0;s:35:"
+  et_pb_role_settings                     | a:4:{s:13:"administr
+ */
+
+/**
+ * 
+ */
 class SyncDiviApiRequest extends SyncInput
 {
-	private $_push_data;
-	private $_post_data;
-
 	const ERROR_DIVI_SETTINGS_NOT_FOUND = 900;
 	const ERROR_DIVI_ROLES_NOT_FOUND = 901;
+	const ERROR_DIVI_VERSION_MISMATCH = 902;
 
-	const NOTICE_DIVI = 900;
+	const NOTICE_NO_SETTINGS = 900;
 
-	private $_api = NULL;
-	private $_push_data = array();
-	private $_tax_data = array();
+	private $_api = NULL;					// SyncApiRequest instance used for API calls
+	private $_push_data = array();			// data being constructed for push operations
+	private $_tax_data = array();			// taxonomy data constructed for push operations
+	private $_post_data;					// API data used in handle_push() / 'spectrom_sync_push_content' action
 
 	/**
 	 * Checks the API request if the action is to pull/push the settings
-	 *
 	 * @param array $args The arguments array sent to SyncApiRequest::api()
 	 * @param string $action The API requested
 	 * @param array $remote_args Array of arguments sent to SyncRequestApi::api()
@@ -47,36 +63,50 @@ SyncDebug::log(__METHOD__.'() no license');
 
 		switch ($action) {
 		case 'pushdivisettings':
-SyncDebug::log(__METHOD__ . '() args=' . var_export($args, TRUE));
+SyncDebug::log(__METHOD__ . '():'. __LINE__ . ' args=' . var_export($args, TRUE));
 			$this->_push_data['pull'] = FALSE;
 			// TODO: why is this being duplicated?
 			$this->_push_data['site-key'] = $args['auth']['site_key'];
 
 			$this->_push_data['source_domain'] = site_url();
+			$this->_push_data['divi-version'] = $this->_get_divi_version();
 			$this->_push_data['divi-settings'] = get_option('et_divi');
-			// TODO: if no settings found, return error
+			$this->_push_data['divi-builder-settings'] = get_option('et_divi_builder_plugin');
+
+			// if no settings found, return error
+			if (FALSE === $this->_push_data['divi-settings'] && FALSE === $this->_push_data['divi-builder-settings']) {
+SyncDebug::log(__METHOD__.'():' . __LINE__ . ' no settings found, return with error');
+				return new WP_Error(self::ERROR_DIVI_SETTINGS_NOT_FOUND);
+			}
 
 			$this->_api = WPSiteSync_Divi::get_instance()->get_api();
 			$this->_api->set_source_domain(site_url());		// set source domain; used in domain transpositions
 
+			// call helper methods to build up the _push_data[] array for the API call
 //			$this->_get_taxonomies($push_data, $tax_data);			###
 			$this->_get_taxonomies();
 //			$this->_get_media($push_data, $api);					###
 			$this->_get_media();
 
-SyncDebug::log(__METHOD__ . '() push_data=' . var_export($this->_push_data, TRUE));
 			$args['push_data'] = $this->_push_data;
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' push_data=' . var_export($args['push_data'], TRUE));
 			break;
 
 		case 'pushdiviroles':
-SyncDebug::log(__METHOD__ . '() args=' . var_export($args, TRUE));
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' args=' . var_export($args, TRUE));
 			$this->_push_data['pull'] = FALSE;
 
+			$this->_push_data['divi-version'] = $this->_get_divi_version();
 			$this->_push_data['divi-roles'] = get_option('et_pb_role_settings');
-			// TODO: if no settings found, return error
-SyncDebug::log(__METHOD__.'():' . __LINE__ . ' push_data=' . var_export($this->_push_data, TRUE));
+
+			// if no settings found, return error
+			if (FALSE === $this->_push_data['divi-roles']) {
+SyncDebug::log(__METHOD__.'():' . __LINE__ . ' no roles found, return with error');
+				return new WP_Error(self::ERROR_DIVI_ROLES_NOT_FOUND);
+			}
 
 			$args['push_data'] = $this->_push_data;
+SyncDebug::log(__METHOD__.'():' . __LINE__ . ' push_data=' . var_export($args['push_data'], TRUE));
 			break;
 		}
 
@@ -107,11 +137,14 @@ SyncDebug::log(__METHOD__.'():' . __LINE__ . ' no license');
 			$this->_push_data = $this->post_raw('push_data', array());
 SyncDebug::log(__METHOD__ . '() found push_data information: ' . var_export($this->_push_data, TRUE));
 
+			// check version numbers
+			$this->_check_strict_mode($response);
+
 			// set source domain- needed for handling media operations
 			WPSiteSync_Divi::get_instance()->get_api()->set_source_domain($this->_push_data['source_domain']);
 SyncDebug::log(__METHOD__ . '() source domain: ' . var_export($this->_push_data['source_domain'], TRUE));
 
-			if (empty($this->_push_data['divi-settings'])) {
+			if (empty($this->_push_data['divi-settings']) && empty($this->_push_data['divi-builder-settings'])) {
 				$response->error_code(SyncDiviApiRequest::ERROR_DIVI_SETTINGS_NOT_FOUND);
 				return TRUE;			// return, signaling that the API request was processed
 			}
@@ -179,7 +212,10 @@ SyncDebug::log(__METHOD__ . '() new term id: ' . var_export($term_id, TRUE));
 				$this->_push_data['divi-settings']);
 
 SyncDebug::log(__METHOD__.'():' . __LINE__ . ' saving Divi settings: ' . var_export($this->_push_data['divi-settings'], TRUE));
-			update_option('et_divi', $this->_push_data['divi-settings']);
+			if (FALSE !== $this->_push_data['divi-settings'])
+				update_option('et_divi', $this->_push_data['divi-settings']);
+			if (FALSE !== $this->_push_data['divi-builder-settings'])
+				update_option('et_divi_builder_plugin', $this->_push_data['divi-builder-settings']);
 
 			$return = TRUE; // tell the SyncApiController that the request was handled
 			break;
@@ -188,7 +224,10 @@ SyncDebug::log(__METHOD__.'():' . __LINE__ . ' saving Divi settings: ' . var_exp
 			$this->_push_data = $this->post_raw('push_data', array());
 SyncDebug::log(__METHOD__ . '() found push_data information: ' . var_export($this->_push_data, TRUE));
 
-			if (empty($this->_push_data['divi-roles'])) {
+			// check version numbers
+			$this->_check_strict_mode($response);
+
+			if (empty($this->_push_data['divi-roles']) && FALSE !== $this->_push_data['divi-roles']) {
 				$response->error_code(SyncDiviApiRequest::ERROR_DIVI_ROLES_NOT_FOUND);
 				return TRUE;			// return, signaling that the API request was processed
 			}
@@ -204,8 +243,14 @@ SyncDebug::log(__METHOD__.'():' . __LINE__ . ' saving Divi roles: ' . var_export
 ###$tax_data = array();
 			$this->_push_data = array();
 			$this->_tax_data = array();
+			$this->_push_data['divi-version'] = $this->_get_divi_version();
 			$this->_push_data['divi-settings'] = get_option('et_divi');
-			// TODO: check if empty and return error
+			$this->_push_data['divi-builder-settings'] = get_option('et_divi_builder_plugin');
+			
+			// check if empty and show notice
+			if (FALSE === $this->_push_data['divi-settings'] && FALSE === $this->_push_data['divi-builder-settings'])
+				$response->notice_code(self::NOTICE_NO_SETTINGS);
+
 			$api = WPSiteSync_Divi::get_instance()->get_api();
 			$api->set_source_domain(site_url());
 
@@ -224,6 +269,7 @@ SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - response data=' . var_export(
 		case 'pulldiviroles':
 ###$pull_data = array();
 			$this->_push_data = array();
+			$this->_push_data['divi-version'] = $this->_get_divi_version();
 			$this->_push_data['divi-roles'] = get_option('et_pb_role_settings');
 			// TODO: check for empty settings and return error
 
@@ -240,7 +286,6 @@ SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - response data=' . var_export(
 
 	/**
 	 * Handles the request on the Source after API Requests are made and the response is ready to be interpreted
-	 *
 	 * @param string $action The API name, i.e. 'push' or 'pull'
 	 * @param array $remote_args The arguments sent to SyncApiRequest::api()
 	 * @param SyncApiResponse $response The response object after the API request has been made
@@ -249,53 +294,59 @@ SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - response data=' . var_export(
 	{
 SyncDebug::log(__METHOD__ . "('{$action}')");
 
-		if ('pushdivisettings' === $action) {
-SyncDebug::log(__METHOD__ . '() response from API request: ' . var_export($response, TRUE));
-
+		switch ($action) {
+		case 'pushdivisettings':
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' response from API request: ' . var_export($response, TRUE));
 			$api_response = NULL;
 
 			if (isset($response->response)) {
-SyncDebug::log(__METHOD__ . '() decoding response: ' . var_export($response->response, TRUE));
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' decoding response: ' . var_export($response->response, TRUE));
 				$api_response = $response->response;
 			} else {
-SyncDebug::log(__METHOD__ . '() no response->response element');
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' no response->response element');
 			}
 
-SyncDebug::log(__METHOD__ . '() api response body=' . var_export($api_response, TRUE));
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' api response body=' . var_export($api_response, TRUE));
 
+			// TODO: not needed unless error_code() is called
 			if (0 === $response->get_error_code()) {
 				$response->success(TRUE);
 			}
-		} else if ('pushdiviroles' === $action) {
-SyncDebug::log(__METHOD__ . '() response from API request: ' . var_export($response, TRUE));
+			break;
+
+		case 'pushdiviroles':
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' response from API request: ' . var_export($response, TRUE));
 
 			$api_response = NULL;
 
 			if (isset($response->response)) {
-SyncDebug::log(__METHOD__ . '() decoding response: ' . var_export($response->response, TRUE));
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' decoding response: ' . var_export($response->response, TRUE));
 				$api_response = $response->response;
 			} else {
-SyncDebug::log(__METHOD__ . '() no response->response element');
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' no response->response element');
 			}
 
-SyncDebug::log(__METHOD__ . '() api response body=' . var_export($api_response, TRUE));
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' api response body=' . var_export($api_response, TRUE));
 
+			// TODO: not needed unless error_code() is called
 			if (0 === $response->get_error_code()) {
 				$response->success(TRUE);
 			}
-		} else if ('pulldivisettings' === $action) {
-SyncDebug::log(__METHOD__ . '() response from API request: ' . var_export($response, TRUE));
+			break;
+
+		case 'pulldivisettings':
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' response from API request: ' . var_export($response, TRUE));
 
 			$api_response = NULL;
 
 			if (isset($response->response)) {
-SyncDebug::log(__METHOD__ . '() decoding response: ' . var_export($response->response, TRUE));
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' decoding response: ' . var_export($response->response, TRUE));
 				$api_response = $response->response;
 			} else {
-SyncDebug::log(__METHOD__ . '() no response->response element');
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' no response->response element');
 			}
 
-SyncDebug::log(__METHOD__ . '() api response body=' . var_export($api_response, TRUE));
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' api response body=' . var_export($api_response, TRUE));
 
 			if (NULL !== $api_response && isset($api_response->data->pull_data)) {
 				$save_post = $_POST;
@@ -321,7 +372,7 @@ SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - pull data=' . var_export($pul
 					'auth' => 0,
 				);
 
-SyncDebug::log(__METHOD__ . '() creating controller with: ' . var_export($args, TRUE));
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' creating controller with: ' . var_export($args, TRUE));
 				$this->_push_controller = new SyncApiController($args);
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - returned from controller');
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - response=' . var_export($response, TRUE));
@@ -333,24 +384,27 @@ SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - response=' . var_export($resp
 
 				$_POST = $save_post;
 
+				// TODO: not needed unless error_code() is called
 				if (0 === $response->get_error_code()) {
 					$response->success(TRUE);
 				}
 			} else {
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' no data found in Pull response ' . var_export($api_response, TRUE));
 			}
-		} else if ('pulldiviroles' === $action) {
-SyncDebug::log(__METHOD__ . '() response from API request: ' . var_export($response, TRUE));
+			break;
+
+		case 'pulldiviroles':
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' response from API request: ' . var_export($response, TRUE));
 			$api_response = NULL;
 
 			if (isset($response->response)) {
-SyncDebug::log(__METHOD__ . '() decoding response: ' . var_export($response->response, TRUE));
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' decoding response: ' . var_export($response->response, TRUE));
 				$api_response = $response->response;
 			} else {
-SyncDebug::log(__METHOD__ . '() no response->response element');
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' no response->response element');
 			}
 
-SyncDebug::log(__METHOD__ . '() api response body=' . var_export($api_response, TRUE));
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' api response body=' . var_export($api_response, TRUE));
 
 			if (NULL !== $api_response && isset($api_response->data->pull_data)) {
 				$save_post = $_POST;
@@ -375,7 +429,7 @@ SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - pull data=' . var_export($pul
 					'auth' => 0,
 				);
 
-SyncDebug::log(__METHOD__ . '() creating controller with: ' . var_export($args, TRUE));
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' creating controller with: ' . var_export($args, TRUE));
 				$this->_push_controller = new SyncApiController($args);
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - returned from controller');
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - response=' . var_export($response, TRUE));
@@ -388,6 +442,7 @@ SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - response=' . var_export($resp
 			} else {
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' no data found in Pull response ' . var_export($api_response, TRUE));
 			}
+			break;
 		}
 	}
 
@@ -595,6 +650,37 @@ SyncDebug::log(__METHOD__ . '() new term id: ' . var_export($term_id, TRUE));
 	/**
 	 * Get Taxonomy information that is referenced via the ['divi_menucats'] data in the Divi settings
 	 */
+	private function _get_taxonomies()
+	{
+SyncDebug::log(__METHOD__.'():' . __LINE__ . ' divi-settings=' . var_export($this->_push_data['divi-settings'], TRUE));
+		if (array_key_exists('divi_menucats', $this->_push_data['divi-settings'])) {
+			$tax_data = array();
+			$categories = NULL;
+			if (isset($this->_push_data['divi-settings']['divi_menucats']))
+				$categories = $this->_push_data['divi-settings']['divi_menucats'];
+			if (isset($this->_push_data['divi-plugin-setting']['divi_menucats']))
+				$categories = $this->_push_data['divi-plugin-setting']['divi_menucats'];
+
+SyncDebug::log(__METHOD__.'():' . __LINE__ . ' categories: ' . var_export($categories, TRUE));
+			if (NULL !== $categories) {
+				foreach ($categories as $category) {
+					$term_data = get_term($category, 'category');
+					if (NULL !== $term_data && !is_error($term_data)) {
+						$tax_name = $term_data->taxonomy;
+						$tax_data['hierarchical'][] = $term_data;
+						$parent = abs($term_data->parent);
+						while (0 !== $parent) {
+							$term = get_term_by('id', $parent, $tax_name, OBJECT);
+							$tax_data['lineage'][$tax_name][] = $term;
+							$parent = abs($term->parent);
+						}
+					}
+				}
+				if (!empty($tax_data))
+					$this->_push_data['divi-categories'] = $tax_data;
+			}
+		}
+	}
 /*	private function _get_taxonomies($push_data, $tax_data)
 	{
 		if (array_key_exists('divi_menucats', $push_data['divi-settings'])) {
@@ -614,29 +700,52 @@ SyncDebug::log(__METHOD__ . '() new term id: ' . var_export($term_id, TRUE));
 		}
 		return $push_data;
 	} */
-	private function _get_taxonomies()
-	{
-		if (array_key_exists('divi_menucats', $this->_push_data['divi-settings'])) {
-			$tax_data = array();
-			$categories = $this->_push_data['divi-settings']['divi_menucats'];
-			foreach ($categories as $category) {
-				$term_data = get_term($category, 'category');
-				$tax_name = $term_data->taxonomy;
-				$tax_data['hierarchical'][] = $term_data;
-				$parent = abs($term_data->parent);
-				while (0 !== $parent) {
-					$term = get_term_by('id', $parent, $tax_name, OBJECT);
-					$tax_data['lineage'][$tax_name][] = $term;
-					$parent = $term->parent;
-				}
-			}
-			$this->_push_data['divi-categories'] = $tax_data;
-		}
-	}
 
 	/**
 	 * Collects any references to media items in the data and uses the SyncApiRequest->send_media() method to add them to the API call.
 	 */
+	private function _get_media(/*$push_data, $api*/)
+	{
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' found push data=' . var_export($this->_push_data, TRUE));
+		if (array_key_exists('divi_468_image', $this->_push_data['divi-settings'])) {
+			$image = $this->_push_data['divi-settings']['divi_468_image'];
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' found image=' . var_export($image, TRUE));
+
+			if (!empty($image)) {
+				if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' calling send_media for=' . var_export($image, TRUE));
+					$image_id = attachment_url_to_postid($image);
+					$this->_api->send_media($image, 0, 0, $image_id);
+				}
+			}
+		}
+
+		if (array_key_exists('divi_favicon', $this->_push_data['divi-settings'])) {
+			$image = $this->_push_data['divi-settings']['divi_favicon'];
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' found image=' . var_export($image, TRUE));
+
+			if (!empty($image)) {
+				if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' calling send_media for=' . var_export($image, TRUE));
+					$image_id = attachment_url_to_postid($image);
+					$this->_api->send_media($image, 0, 0, $image_id);
+				}
+			}
+		}
+
+		if (array_key_exists('divi_logo', $this->_push_data['divi-settings'])) {
+			$image = $this->_push_data['divi-settings']['divi_logo'];
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' found image=' . var_export($image, TRUE));
+
+			if (!empty($image)) {
+				if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
+SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' calling send_media for=' . var_export($image, TRUE));
+					$image_id = attachment_url_to_postid($image);
+					$this->_api->send_media($image, 0, 0, $image_id);
+				}
+			}
+		}
+	}
 /*	private function _get_media($push_data, $api)
 	{
 SyncDebug::log(__METHOD__ . '() found push data=' . var_export($push_data, TRUE));
@@ -679,45 +788,30 @@ SyncDebug::log(__METHOD__ . '() calling send_media for=' . var_export($image, TR
 			}
 		}
 	} */
-	private function _get_media(/*$push_data, $api*/)
+
+	/**
+	 * Returns the version of the Divi Theme/ Plugin installed
+	 * @return string a dotted decimal string representing the version number
+	 */
+	private function _get_divi_version()
 	{
-SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' found push data=' . var_export($this->_push_data, TRUE));
-		if (array_key_exists('divi_468_image', $this->_push_data['divi-settings'])) {
-			$image = $this->_push_data['divi-settings']['divi_468_image'];
-SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' found image=' . var_export($image, TRUE));
+		$vers = get_option('et_core_version');
+		return $vers;
+	}
 
-			if (!empty($image)) {
-				if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
-SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' calling send_media for=' . var_export($image, TRUE));
-					$image_id = attachment_url_to_postid($image);
-					$this->_api->send_media($image, 0, 0, $image_id);
-				}
-			}
-		}
-
-		if (array_key_exists('divi_favicon', $this->_push_data['divi-settings'])) {
-			$image = $this->_push_data['divi-settings']['divi_favicon'];
-SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' found image=' . var_export($image, TRUE));
-
-			if (!empty($image)) {
-				if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
-SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' calling send_media for=' . var_export($image, TRUE));
-					$image_id = attachment_url_to_postid($image);
-					$this->_api->send_media($image, 0, 0, $image_id);
-				}
-			}
-		}
-
-		if (array_key_exists('divi_logo', $this->_push_data['divi-settings'])) {
-			$image = $this->_push_data['divi-settings']['divi_logo'];
-SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' found image=' . var_export($image, TRUE));
-
-			if (!empty($image)) {
-				if (parse_url($image, PHP_URL_HOST) === parse_url(site_url(), PHP_URL_HOST)) {
-SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' calling send_media for=' . var_export($image, TRUE));
-					$image_id = attachment_url_to_postid($image);
-					$this->_api->send_media($image, 0, 0, $image_id);
-				}
+	/**
+	 * Checks if Strict Mode is activated and if Divi versions match between Source and Target.
+	 * Uses the SyncApiResponse parameter to return an error code if versions do not match; otherwise returns
+	 * @param SyncApiResponse $response The response object used for the current API call.
+	 */
+	private function _check_strict_mode($response)
+	{
+		// check version numbers
+		if (1 === SyncOptions::get('strict', 0)) {
+			// we're in strict mode - make sure the versions match
+			if ($this->_get_divi_version() !== $this->_push_data['divi-version']) {
+				$response->error_code(self::ERROR_DIVI_VERSION_MISMATCH);
+				$response->send();
 			}
 		}
 	}
