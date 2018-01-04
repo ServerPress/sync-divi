@@ -12,6 +12,8 @@ The PHP code portions are distributed under the GPL license. If not otherwise st
 images, manuals, cascading stylesheets and included JavaScript are NOT GPL.
 */
 
+// TODO: remove ### comments blocking licensing code
+
 if (!class_exists('WPSiteSync_Divi', FALSE)) {
 	/*
 	 * @package WPSiteSync_Divi
@@ -154,6 +156,7 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 
 		/**
 		 * Callback for the 'spectrom_sync_upload_media_allowed_mime_type' filter the allowed mime type in upload_media
+		// TODO: document parameters
 		 * @param $default
 		 * @param $img_type
 		 * @return string
@@ -182,8 +185,6 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 
 		/**
 		 * Add Divi related post types to allowed post types
-		 *
-		 * @since 1.0.0
 		 * @param array $post_types Currently allowed post types
 		 * @return array The merged post types
 		 */
@@ -319,6 +320,7 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		 */
 		public function notice_requires_wpss()
 		{
+			// TODO: use common code in wpss core
 			$this->_show_notice(sprintf(__('WPSiteSync for Divi requires the main <em>WPSiteSync for Content</em> plugin to be installed and activated. Please <a href="%1$s">click here</a> to install or <a href="%2$s">click here</a> to activate.', 'wpsitesync-divi'),
 				admin_url('plugin-install.php?tab=search&s=wpsitesynccontent'),
 				admin_url('plugins.php')), 'notice-warning');
@@ -329,6 +331,7 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		 */
 		public function notice_minimum_version()
 		{
+			// TODO: use common code in wpss core
 			$this->_show_notice(sprintf(__('WPSiteSync for Divi requires version %1$s or greater of <em>WPSiteSync for Content</em> to be installed. Please <a href="2%s">click here</a> to update.', 'wpsitesync-divi'),
 				self::REQUIRED_VERSION,
 				admin_url('plugins.php')), 'notice-warning');
