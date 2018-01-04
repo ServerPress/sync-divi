@@ -34,13 +34,14 @@ class SyncDiviAjaxRequest extends SyncInput
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - returned from api() call; copying response');
 		$resp->copy($api_response);
 
-		if (0 === $api_response->get_error_code()) {
-SyncDebug::log(__METHOD__.'():' . __LINE__ . ' no error, setting success');
-			$resp->success(TRUE);
-		} else {
-			$resp->success(FALSE);
-SyncDebug::log(__METHOD__.'():' . __LINE__ . ' error code: ' . $api_response->get_error_code());
-		}
+		// TODO: probably don't need to with success included in copy()
+###		if (0 === $api_response->get_error_code()) {
+###SyncDebug::log(__METHOD__.'():' . __LINE__ . ' no error, setting success');
+###			$resp->success(TRUE);
+###		} else {
+###			$resp->success(FALSE);
+###SyncDebug::log(__METHOD__.'():' . __LINE__ . ' error code: ' . $api_response->get_error_code());
+###		}
 
 		return TRUE; // return, signaling that we've handled the request
 	}
@@ -58,13 +59,14 @@ SyncDebug::log(__METHOD__.'():' . __LINE__ . ' error code: ' . $api_response->ge
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - returned from api() call; copying response');
 		$resp->copy($api_response);
 
-		if (0 === $api_response->get_error_code()) {
-SyncDebug::log(__METHOD__.'():' . __LINE__ . ' no error, setting success');
-			$resp->success(TRUE);
-		} else {
-			$resp->success(FALSE);
-SyncDebug::log(__METHOD__.'():' . __LINE__ . ' error code: ' . $api_response->get_error_code());
-		}
+		// TODO: probably don't need to with success included in copy()
+###		if (0 === $api_response->get_error_code()) {
+###SyncDebug::log(__METHOD__.'():' . __LINE__ . ' no error, setting success');
+###			$resp->success(TRUE);
+###		} else {
+###			$resp->success(FALSE);
+###SyncDebug::log(__METHOD__.'():' . __LINE__ . ' error code: ' . $api_response->get_error_code());
+###		}
 
 		return TRUE; // return, signaling that we've handled the request
 	}
@@ -82,13 +84,14 @@ SyncDebug::log(__METHOD__.'():' . __LINE__ . ' error code: ' . $api_response->ge
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - returned from api() call; copying response');
 		$resp->copy($api_response);
 
-		if (0 === $api_response->get_error_code()) {
-SyncDebug::log(__METHOD__.'():' . __LINE__ . ' no error, setting success');
-			$resp->success(TRUE);
-		} else {
-			$resp->success(FALSE);
-SyncDebug::log(__METHOD__.'():' . __LINE__ . ' error code: ' . $api_response->get_error_code());
-		}
+		// TODO: probably don't need to with success included in copy()
+###		if (0 === $api_response->get_error_code()) {
+###SyncDebug::log(__METHOD__.'():' . __LINE__ . ' no error, setting success');
+###			$resp->success(TRUE);
+###		} else {
+###			$resp->success(FALSE);
+###SyncDebug::log(__METHOD__.'():' . __LINE__ . ' error code: ' . $api_response->get_error_code());
+###		}
 
 		return TRUE; // return, signaling that we've handled the request
 	}
@@ -106,13 +109,14 @@ SyncDebug::log(__METHOD__.'():' . __LINE__ . ' error code: ' . $api_response->ge
 SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - returned from api() call; copying response');
 		$resp->copy($api_response);
 
-		if (0 === $api_response->get_error_code()) {
-SyncDebug::log(__METHOD__.'():' . __LINE__ . ' no error, setting success');
-			$resp->success(TRUE);
-		} else {
-			$resp->success(FALSE);
-SyncDebug::log(__METHOD__.'():' . __LINE__ . ' error code: ' . $api_response->get_error_code());
-		}
+		// TODO: probably don't need to with success included in copy()
+###		if (0 === $api_response->get_error_code()) {
+###SyncDebug::log(__METHOD__.'():' . __LINE__ . ' no error, setting success');
+###//			$resp->success(TRUE);
+###		} else {
+###			$resp->success(FALSE);
+###SyncDebug::log(__METHOD__.'():' . __LINE__ . ' error code: ' . $api_response->get_error_code());
+###		}
 
 		return TRUE; // return, signaling that we've handled the request
 	}
