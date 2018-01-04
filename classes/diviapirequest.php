@@ -37,6 +37,9 @@ class SyncDiviApiRequest extends SyncInput
 	private $_tax_data = array();			// taxonomy data constructed for push operations
 	private $_post_data;					// API data used in handle_push() / 'spectrom_sync_push_content' action
 
+	private $_source = NULL;				// source domain for array walk updates
+	private $_dest = NULL;					// destination domain for array walk updates
+
 	/**
 	 * Checks the API request if the action is to pull/push the settings
 	 * @param array $args The arguments array sent to SyncApiRequest::api()
@@ -149,73 +152,89 @@ SyncDebug::log(__METHOD__ . '() source domain: ' . var_export($this->_push_data[
 				return TRUE;			// return, signaling that the API request was processed
 			}
 
-			foreach ($this->_push_data['divi-settings'] as $setting_key => $settings) {
-				if (empty($settings))
-					continue;
+			$this->_source = SyncApiController::get_instance()->source;
+			$this->_dest = site_url();
 
-				switch ($setting_key) {
-				case 'divi_menupages':
-					// look up the Target page IDs using SyncModel->get_sync_data()
-					$model = new SyncModel();
-					foreach ($settings as $key => $page_id) {
-SyncDebug::log(__METHOD__ . '() found menu page: ' . var_export($page_id, TRUE));
-						$sync_data = $model->get_sync_data($page_id, $this->_push_data['site-key']);
-SyncDebug::log(__METHOD__ . '() found sync data: ' . var_export($sync_data, TRUE));
-						if (NULL === $sync_data) {
-							// unset array key
-							unset($settings[$key]);
-						} else {
-							// replace id with new id
-SyncDebug::log(__METHOD__ . '() replace with: ' . var_export($sync_data->target_content_id, TRUE));
-							$settings[$key] = $sync_data->target_content_id;
-						}
-					}
-					$this->_push_data['divi-settings']['divi_menupages'] = $settings;
-					break;
+			// check for Divi Theme settings
+			if (isset($this->_push_data['divi-settings']) && 0 !== count($this->_push_data['divi-settings'])) {
+				$set = $this->_process_settings($this->_push_data['divi-settings']);
+SyncDebug::log(__METHOD__.'():' . __LINE__ . ' saving Divi settings: ' . var_export($set, TRUE));
+				if (!empty($set))
+					update_option('et_divi', $set);
 
-				case 'divi_menucats':
-					// for each category ID, get the new category ID and replace it.
-					foreach ($settings as $key => $cat_id) {
-SyncDebug::log(__METHOD__ . '() found menu category: ' . var_export($cat_id, TRUE));
-						foreach ($this->_push_data['divi-categories']['hierarchical'] as $index => $cat) {
-							if ($cat_id === $cat['term_id']) {
-								$name = $this->_push_data['divi-categories']['hierarchical'][$index]['name'];
-SyncDebug::log(__METHOD__ . '() term name: ' . var_export($name, TRUE));
-								$term_index = $index;
-							}
-						}
-						$term = get_term_by('name', $name, 'category');
-
-						// add new term if it doesn't exist
-						if (FALSE === $term) {
-							$term_id = SyncApiController::get_instance()->process_hierarchical_term($this->_push_data['divi-categories']['hierarchical'][$term_index], $this->_push_data['divi-categories']['hierarchical']);
-						} else {
-							$term_id = $term->term_id;
-						}
-
-						if (0 !== $term_id) {
-SyncDebug::log(__METHOD__ . '() new term id: ' . var_export($term_id, TRUE));
-							$settings[$key] = $term_id;
-						} else {
-							unset($settings[$key]);
-						}
-
-					}
-					$this->_push_data['divi-settings']['divi_menucats'] = $settings;
-					break;
-				}
+#				foreach ($this->_push_data['divi-settings'] as $setting_key => $settings) {
+#					if (empty($settings))
+#						continue;
+#
+#					switch ($setting_key) {
+#					case 'divi_menupages':
+#						// look up the Target page IDs using SyncModel->get_sync_data()
+#						$model = new SyncModel();
+#						foreach ($settings as $key => $page_id) {
+#SyncDebug::log(__METHOD__ . '() found menu page: ' . var_export($page_id, TRUE));
+#							$sync_data = $model->get_sync_data($page_id, $this->_push_data['site-key']);
+#SyncDebug::log(__METHOD__ . '() found sync data: ' . var_export($sync_data, TRUE));
+#							if (NULL === $sync_data) {
+#								// unset array key
+#								unset($settings[$key]);
+#							} else {
+#								// replace id with new id
+#SyncDebug::log(__METHOD__ . '() replace with: ' . var_export($sync_data->target_content_id, TRUE));
+#								$settings[$key] = $sync_data->target_content_id;
+#							}
+#						}
+#						$this->_push_data['divi-settings']['divi_menupages'] = $settings;
+#						break;
+#
+#					case 'divi_menucats':
+#						// for each category ID, get the new category ID and replace it.
+#						foreach ($settings as $key => $cat_id) {
+#SyncDebug::log(__METHOD__ . '() found menu category: ' . var_export($cat_id, TRUE));
+#							foreach ($this->_push_data['divi-categories']['hierarchical'] as $index => $cat) {
+#								if ($cat_id === $cat['term_id']) {
+#									$name = $this->_push_data['divi-categories']['hierarchical'][$index]['name'];
+#SyncDebug::log(__METHOD__ . '() term name: ' . var_export($name, TRUE));
+#									$term_index = $index;
+#								}
+#							}
+#							$term = get_term_by('name', $name, 'category');
+#
+#							// add new term if it doesn't exist
+#							if (FALSE === $term) {
+#								$term_id = SyncApiController::get_instance()->process_hierarchical_term($this->_push_data['divi-categories']['hierarchical'][$term_index], $this->_push_data['divi-categories']['hierarchical']);
+#							} else {
+#								$term_id = $term->term_id;
+#							}
+#
+#							if (0 !== $term_id) {
+#SyncDebug::log(__METHOD__ . '() new term id: ' . var_export($term_id, TRUE));
+#								$settings[$key] = $term_id;
+#							} else {
+#								unset($settings[$key]);
+#							}
+#						}
+#						$this->_push_data['divi-settings']['divi_menucats'] = $settings;
+#						break;
+#					}
+#				}
+#
+#				$this->_push_data['divi-settings'] = str_replace(
+#					SyncApiController::get_instance()->source,
+#					site_url(),
+#					$this->_push_data['divi-settings']);
+#
+#SyncDebug::log(__METHOD__.'():' . __LINE__ . ' saving Divi settings: ' . var_export($this->_push_data['divi-settings'], TRUE));
+#				if (FALSE !== $this->_push_data['divi-settings'])
+#					update_option('et_divi', $this->_push_data['divi-settings']);
 			}
 
-			$this->_push_data['divi-settings'] = str_replace(
-				SyncApiController::get_instance()->source,
-				site_url(),
-				$this->_push_data['divi-settings']);
-
-SyncDebug::log(__METHOD__.'():' . __LINE__ . ' saving Divi settings: ' . var_export($this->_push_data['divi-settings'], TRUE));
-			if (FALSE !== $this->_push_data['divi-settings'])
-				update_option('et_divi', $this->_push_data['divi-settings']);
-			if (FALSE !== $this->_push_data['divi-builder-settings'])
-				update_option('et_divi_builder_plugin', $this->_push_data['divi-builder-settings']);
+			// check for Divi Plugin settings
+			if (isset($this->_push_data['divi-builder-settings']) && 0 !== count($this->_push_data['divi-builder-settings'])) {
+				$set = $this->_process_settings($this->_push_data['divi-builder-settings']);
+SyncDebug::log(__METHOD__.'():' . __LINE__ . ' saving Divi Plugin settings: ' . var_export($set, TRUE));
+				if (!empty($set))
+					update_option('et_divi_builder_plugin', $set);
+			}
 
 			$return = TRUE; // tell the SyncApiController that the request was handled
 			break;
@@ -282,6 +301,76 @@ SyncDebug::log(__METHOD__ . '():' . __LINE__ . ' - response data=' . var_export(
 		}
 
 		return $return;
+	}
+
+	private function _process_settings($settings)
+	{
+		foreach ($settings as $setting_key => &$set) {
+			if (empty($set))
+				continue;
+
+			switch ($setting_key) {
+			case 'divi_menupages':
+				// look up the Target page IDs using SyncModel->get_sync_data()
+				$model = new SyncModel();
+				foreach ($set as $key => $page_id) {
+SyncDebug::log(__METHOD__ . '() found menu page: ' . var_export($page_id, TRUE));
+					$sync_data = $model->get_sync_data($page_id, $this->_push_data['site-key']);
+SyncDebug::log(__METHOD__ . '() found sync data: ' . var_export($sync_data, TRUE));
+					if (NULL === $sync_data) {
+						// unset array key
+						unset($set[$key]);
+					} else {
+						// replace id with new id
+SyncDebug::log(__METHOD__ . '() replace with: ' . var_export($sync_data->target_content_id, TRUE));
+						$set[$key] = $sync_data->target_content_id;
+					}
+				}
+				break;
+
+			case 'divi_menucats':
+				// for each category ID, get the new category ID and replace it.
+				foreach ($set as $key => $cat_id) {
+SyncDebug::log(__METHOD__ . '() found menu category: ' . var_export($cat_id, TRUE));
+					foreach ($this->_push_data['divi-categories']['hierarchical'] as $index => $cat) {
+						if ($cat_id === $cat['term_id']) {
+							$name = $this->_push_data['divi-categories']['hierarchical'][$index]['name'];
+SyncDebug::log(__METHOD__ . '() term name: ' . var_export($name, TRUE));
+							$term_index = $index;
+						}
+					}
+					$term = get_term_by('name', $name, 'category');
+
+					// add new term if it doesn't exist
+					if (FALSE === $term) {
+						$term_id = SyncApiController::get_instance()->process_hierarchical_term($this->_push_data['divi-categories']['hierarchical'][$term_index], $this->_push_data['divi-categories']['hierarchical']);
+					} else {
+						$term_id = $term->term_id;
+					}
+
+					if (0 !== $term_id) {
+SyncDebug::log(__METHOD__ . '() new term id: ' . var_export($term_id, TRUE));
+						$set[$key] = $term_id;
+					} else {
+						unset($set[$key]);
+					}
+				}
+				break;
+			}
+		}
+
+		array_walk_recursive($settings, array($this, 'process_array_elem'));
+#		$this->_push_data['divi-settings'] = str_replace(
+#			SyncApiController::get_instance()->source,
+#			site_url(),
+#			$this->_push_data['divi-settings']);
+
+		return $settings;
+	}
+	public function process_array_elem(&$elem)
+	{
+		if (is_string($elem))
+			$elem = str_replace($this->_source, $this->_dest, $elem);
 	}
 
 	/**
