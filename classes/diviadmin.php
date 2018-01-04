@@ -19,9 +19,6 @@ class SyncDiviAdmin
 
 	/**
 	 * Retrieve singleton class instance
-	 *
-	 * @since 1.0.0
-	 * @static
 	 * @return null|SyncDiviAdmin instance reference to plugin
 	 */
 	public static function get_instance()
@@ -33,9 +30,7 @@ class SyncDiviAdmin
 
 	/**
 	 * Registers Javascript to be used.
-	 * @since 1.0.0
 	 * @param $hook Admin page hook
-	 * @return void
 	 */
 	public function admin_enqueue_scripts($hook)
 	{
@@ -62,9 +57,6 @@ class SyncDiviAdmin
 
 	/**
 	 * Print hidden div for translatable text
-	 *
-	 * @since 1.0.0
-	 * @return void
 	 */
 	public function print_hidden_div()
 	{
@@ -141,9 +133,9 @@ class SyncDiviAdmin
 
 	/**
 	 * Checks if the current ajax operation is for this plugin
-	 * @param  boolean $found Return TRUE or FALSE if the operation is found
-	 * @param  string $operation The type of operation requested
-	 * @param  SyncApiResponse $resp The response to be sent
+	 * @param boolean $found Return TRUE or FALSE if the operation is found
+	 * @param string $operation The type of operation requested
+	 * @param SyncApiResponse $resp The response to be sent
 	 * @return boolean Return TRUE if the current ajax operation is for this plugin, otherwise return $found
 	 */
 	public function check_ajax_query($found, $operation, SyncApiResponse $resp)
