@@ -72,6 +72,7 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 				SyncDiviAdmin::get_instance();
 			}
 
+			// move into 'spectrom_sync_api_init' callback
 			add_filter('spectrom_sync_allowed_post_types', array($this, 'allowed_post_types'));
 			add_filter('spectrom_sync_tax_list', array($this, 'add_taxonomies'), 10, 1);
 			add_filter('spectrom_sync_api_request_action', array($this, 'api_request'), 20, 3); // called by SyncApiRequest
