@@ -29,7 +29,6 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		const PLUGIN_NAME = 'WPSiteSync for Divi';
 		const PLUGIN_VERSION = '1.0';
 		const PLUGIN_KEY = 'bde626bb9c6a817dfd724451f3c3acba';
-		// TODO: this needs to be updated to 1.3.3 before releasing
 		const REQUIRED_VERSION = '1.3.2';					// minimum version of WPSiteSync required for this add-on to initialize
 
 		private function __construct()
@@ -64,6 +63,7 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 			// check for minimum WPSiteSync version
 			if (is_admin() && version_compare(WPSiteSyncContent::PLUGIN_VERSION, self::REQUIRED_VERSION) < 0 && current_user_can('activate_plugins')) {
 				add_action('admin_notices', array($this, 'notice_minimum_version'));
+				add_action('admin_init', array($this, 'disable_plugin'));
 				return;
 			}
 
@@ -312,6 +312,7 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 			if (!class_exists('WPSiteSyncContent', FALSE) && current_user_can('activate_plugins')) {
 				if (is_admin())
 					add_action('admin_notices', array($this, 'notice_requires_wpss'));
+				add_action('admin_init', array($this, 'disable_plugin'));
 				return;
 			}
 		}
@@ -322,7 +323,7 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		public function notice_requires_wpss()
 		{
 			// TODO: use common code in wpss core
-			$this->_show_notice(sprintf(__('WPSiteSync for Divi requires the main <em>WPSiteSync for Content</em> plugin to be installed and activated. Please <a href="%1$s">click here</a> to install or <a href="%2$s">click here</a> to activate.', 'wpsitesync-divi'),
+			$this->_show_notice(sprintf(__('The <em>WPSiteSync for Divi</em> plugin requires the main <em>WPSiteSync for Content</em> plugin to be installed and activated. Please <a href="%1$s">click here</a> to install or <a href="%2$s">click here</a> to activate.', 'wpsitesync-divi'),
 				admin_url('plugin-install.php?tab=search&s=wpsitesynccontent'),
 				admin_url('plugins.php')), 'notice-warning');
 		}
@@ -333,7 +334,7 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		public function notice_minimum_version()
 		{
 			// TODO: use common code in wpss core
-			$this->_show_notice(sprintf(__('WPSiteSync for Divi requires version %1$s or greater of <em>WPSiteSync for Content</em> to be installed. Please <a href="2%s">click here</a> to update.', 'wpsitesync-divi'),
+			$this->_show_notice(sprintf(__('The <em>WPSiteSync for Divi</em> requires version %1$s or greater of <em>WPSiteSync for Content</em> to be installed. Please <a href="2%s">click here</a> to update.', 'wpsitesync-divi'),
 				self::REQUIRED_VERSION,
 				admin_url('plugins.php')), 'notice-warning');
 		}
@@ -353,6 +354,14 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		}
 
 		/**
+		 * Disables the plugin if WPSiteSync not installed or ACF is too old
+		 */
+		public function disable_plugin()
+		{
+			deactivate_plugins(plugin_basename(__FILE__));
+		}
+
+		/**
 		 * Adds the WPSiteSync for Divi add-on to the list of known WPSiteSync extensions
 		 * @param array $extensions The list of extensions
 		 * @param boolean TRUE to force adding the extension; otherwise FALSE
@@ -360,7 +369,7 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		 */
 		public function filter_active_extensions($extensions, $set = FALSE)
 		{
-			if ($set || WPSiteSyncContent::get_instance()->get_license()->check_license('sync_divi', self::PLUGIN_KEY, self::PLUGIN_NAME))
+###			if ($set || WPSiteSyncContent::get_instance()->get_license()->check_license('sync_divi', self::PLUGIN_KEY, self::PLUGIN_NAME))
 				$extensions['sync_divi'] = array(
 					'name' => self::PLUGIN_NAME,
 					'version' => self::PLUGIN_VERSION,

@@ -2,7 +2,7 @@
 
 /*
  * Allows syncing of Divi content and settings between the Source and Target sites
- * 
+ *
  * The following represents the data structure used in Sync operations:
  *  $_push_data['divi-version']				Theme / Plugin version, via get_option('et_core_version')
  *  $_push_data['divi-settings']			Theme settings, via get_option('et_divi')
@@ -22,7 +22,7 @@ settings:
  */
 
 /**
- * 
+ *
  */
 class SyncDiviApiRequest extends SyncInput
 {
@@ -265,7 +265,7 @@ SyncDebug::log(__METHOD__.'():' . __LINE__ . ' saving Divi roles: ' . var_export
 			$this->_push_data['divi-version'] = $this->_get_divi_version();
 			$this->_push_data['divi-settings'] = get_option('et_divi');
 			$this->_push_data['divi-builder-settings'] = get_option('et_divi_builder_plugin');
-			
+
 			// check if empty and show notice
 			if (FALSE === $this->_push_data['divi-settings'] && FALSE === $this->_push_data['divi-builder-settings'])
 				$response->notice_code(self::NOTICE_NO_SETTINGS);
