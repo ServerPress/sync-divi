@@ -5,14 +5,12 @@ Plugin URI: http://wpsitesync.com
 Description: Extension for WPSiteSync for Content that provides the ability to Sync Content created with the Divi theme and Divi Builder plugin and settings within the WordPress admin.
 Author: WPSiteSync
 Author URI: http://wpsitesync.com
-Version: 1.0
+Version: 1.1
 Text Domain: wpsitesync-divi
 
 The PHP code portions are distributed under the GPL license. If not otherwise stated, all
 images, manuals, cascading stylesheets and included JavaScript are NOT GPL.
 */
-
-// TODO: remove ### comments blocking licensing code
 
 if (!class_exists('WPSiteSync_Divi', FALSE)) {
 	/*
@@ -27,9 +25,9 @@ if (!class_exists('WPSiteSync_Divi', FALSE)) {
 		private $_api = NULL;
 
 		const PLUGIN_NAME = 'WPSiteSync for Divi';
-		const PLUGIN_VERSION = '1.0';
 		const PLUGIN_KEY = 'bde626bb9c6a817dfd724451f3c3acba';
-		const REQUIRED_VERSION = '1.3.2';					// minimum version of WPSiteSync required for this add-on to initialize
+		const PLUGIN_VERSION = '1.1';
+		const REQUIRED_VERSION = '1.6';						// minimum version of WPSiteSync required for this add-on to initialize
 
 		private function __construct()
 		{
